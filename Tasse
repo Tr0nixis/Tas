@@ -1,0 +1,259 @@
+import cv2
+import json
+import os
+from datetime import datetime
+from fastapi import FastAPI
+from threading import Thread, Lock
+import uvicorn
+
+# =====================================================
+# CONFIG
+# =====================================================
+
+CAMERA_INDEX = 0
+
+LOG_FILE = "inspection_log.json"
+DEFECT_IMAGE_FOLDER = "defect_images"
+
+BLACK_THRESHOLD = 40
+MIN_DEFECT_AREA = 1000
+
+# =====================================================
+# SETUP
+# =====================================================
+
+os.makedirs(DEFECT_IMAGE_FOLDER, exist_ok=True)
+
+if not os.path.exists(LOG_FILE):
+    with open(LOG_FILE, "w") as f:
+        json.dump([], f)
+
+app = FastAPI(title="Product Inspection API")
+
+latest_scan = None
+latest_frame = None
+frame_lock = Lock()
+
+# =====================================================
+# QR DETECTOR
+# =====================================================
+
+qr_detector = cv2.QRCodeDetector()
+
+
+def detect_qr(frame):
+    data, points, _ = qr_detector.detectAndDecode(frame)
+
+    if points is not None and data:
+        return data.strip()
+
+    return None
+
+
+# =====================================================
+# BLACK SPOT DETECTION
+# =====================================================
+
+def detect_black_spot(frame):
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    _, thresh = cv2.threshold(
+        gray,
+        BLACK_THRESHOLD,
+        255,
+        cv2.THRESH_BINARY_INV
+    )
+
+    contours, _ = cv2.findContours(
+        thresh,
+        cv2.RETR_EXTERNAL,
+        cv2.CHAIN_APPROX_SIMPLE
+    )
+
+    largest_area = 0
+
+    for contour in contours:
+        area = cv2.contourArea(contour)
+
+        if area > largest_area:
+            largest_area = area
+
+    defective = largest_area >= MIN_DEFECT_AREA
+
+    return defective, largest_area
+
+
+# =====================================================
+# LOGGING
+# =====================================================
+
+def load_logs():
+    try:
+        with open(LOG_FILE, "r") as f:
+            return json.load(f)
+    except:
+        return []
+
+
+def save_log(entry):
+    logs = load_logs()
+
+    logs.append(entry)
+
+    with open(LOG_FILE, "w") as f:
+        json.dump(logs, f, indent=4)
+
+
+# =====================================================
+# CAMERA THREAD
+# =====================================================
+
+def camera_worker():
+    global latest_frame
+
+    cap = cv2.VideoCapture(CAMERA_INDEX)
+
+    if not cap.isOpened():
+        print("ERROR: Camera not found.")
+        return
+
+    while True:
+        ret, frame = cap.read()
+
+        if not ret:
+            continue
+
+        with frame_lock:
+            latest_frame = frame.copy()
+
+
+# =====================================================
+# INSPECTION
+# =====================================================
+
+def inspect_current_frame():
+    global latest_scan
+
+    with frame_lock:
+        if latest_frame is None:
+            return {
+                "success": False,
+                "error": "No frame available"
+            }
+
+        frame = latest_frame.copy()
+
+    product_id = detect_qr(frame)
+
+    if not product_id:
+        return {
+            "success": False,
+            "error": "No QR code detected"
+        }
+
+    defective, defect_area = detect_black_spot(frame)
+
+    status = "DEFECTIVE" if defective else "PASS"
+
+    timestamp = datetime.now().strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
+
+    result = {
+        "timestamp": timestamp,
+        "product_id": product_id,
+        "status": status,
+        "defect_area": defect_area
+    }
+
+    if defective:
+        image_name = (
+            f"{product_id}_"
+            f"{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+        )
+
+        image_path = os.path.join(
+            DEFECT_IMAGE_FOLDER,
+            image_name
+        )
+
+        cv2.imwrite(image_path, frame)
+
+        result["image"] = image_path
+
+    save_log(result)
+
+    latest_scan = result
+
+    return {
+        "success": True,
+        **result
+    }
+
+
+# =====================================================
+# API
+# =====================================================
+
+@app.get("/")
+def root():
+    return {
+        "service": "Inspection API",
+        "status": "running"
+    }
+
+
+@app.get("/scan")
+def scan():
+    return inspect_current_frame()
+
+
+@app.get("/latest")
+def latest():
+    return latest_scan
+
+
+@app.get("/logs")
+def logs():
+    return load_logs()
+
+
+@app.get("/stats")
+def stats():
+    logs = load_logs()
+
+    total = len(logs)
+
+    defective = sum(
+        1
+        for item in logs
+        if item["status"] == "DEFECTIVE"
+    )
+
+    passed = total - defective
+
+    return {
+        "total_products": total,
+        "passed": passed,
+        "defective": defective
+    }
+
+
+# =====================================================
+# START
+# =====================================================
+
+if __name__ == "__main__":
+
+    camera_thread = Thread(
+        target=camera_worker,
+        daemon=True
+    )
+
+    camera_thread.start()
+
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=5000
+    )
