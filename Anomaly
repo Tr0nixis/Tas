@@ -1,0 +1,157 @@
+Anomali-AI för PCB-inspektion – Översikt över modeller
+Sammanställd för utvärdering av PCB-inspektionsprojekt.
+
+Instruktioner för utvärdering
+1. Samla minst 500–5000 bilder på felfria PCB-kort.
+2. Testa flera modeller på samma dataset.
+3. Mät AUROC, F1-score, precision, recall och inferenstid.
+4. Kontrollera särskilt små fel såsom saknade komponenter, lödbryggor och repor.
+5. Utvärdera både noggrannhet och driftkostnad.
+
+Modelljämförelse
+PatchCore
+Fördelar: Mycket stark industribaslinje, hög noggrannhet, fungerar med få träningsbilder.
+
+Nackdelar: Kräver lagring av många feature-vektorer, kan bli minneskrävande.
+
+AnomalyCLIP
+Fördelar: Bra för okända fel, utnyttjar stora vision-language-modeller.
+
+Nackdelar: Tyngre beräkningar och mer komplex implementering.
+
+WinCLIP
+Fördelar: Stark zero-shot-anomalidetektion, bra generalisering.
+
+Nackdelar: Kan vara känslig för variationer i belysning.
+
+RD4AD
+Fördelar: Bra lokalisering av små PCB-defekter.
+
+Nackdelar: Mer komplex träning än enklare metoder.
+
+FastFlow
+Fördelar: Snabb inferens, lämplig för produktion.
+
+Nackdelar: Kan tappa precision på mycket komplexa defekter.
+
+PaDiM
+Fördelar: Lätt att implementera, bra industriell prestanda.
+
+Nackdelar: Kan kräva mycket minne vid högupplösta bilder.
+
+SPADE
+Fördelar: Bra anomalilokalisering.
+
+Nackdelar: Långsammare än modernare metoder.
+
+STFPM
+Fördelar: Bra balans mellan hastighet och precision.
+
+Nackdelar: Inte alltid bäst på mycket små fel.
+
+DRAEM
+Fördelar: Klarar komplexa anomalier väl.
+
+Nackdelar: Träningen kan vara mer resurskrävande.
+
+Reverse Distillation
+Fördelar: Hög precision för visuella anomalier.
+
+Nackdelar: Mer avancerad modellarkitektur.
+
+EfficientAD
+Fördelar: Mycket snabb och effektiv för edge-enheter.
+
+Nackdelar: Kan ge något lägre toppnoggrannhet.
+
+CS-Flow
+Fördelar: Bra på täta feature-representationer.
+
+Nackdelar: Högre beräkningskostnad.
+
+CFA
+Fördelar: Bra anomalilokalisering på industridata.
+
+Nackdelar: Mindre beprövad än PatchCore.
+
+MemAE
+Fördelar: Minnesbaserad metod som kan upptäcka ovanliga mönster.
+
+Nackdelar: Kan vara svårare att optimera.
+
+GANomaly
+Fördelar: Generativ metod för osuperviserad anomalidetektion.
+
+Nackdelar: GAN-träning kan vara instabil.
+
+f-AnoGAN
+Fördelar: Bra anomalipoäng och visualisering.
+
+Nackdelar: Långsammare träning.
+
+CutPaste
+Fördelar: Enkel och effektiv självövervakad träning.
+
+Nackdelar: Kan missa vissa subtila anomalier.
+
+MSFlow
+Fördelar: Bra precision på MVTec-liknande dataset.
+
+Nackdelar: Relativt ny och mindre testad i produktion.
+
+CFLOW-AD
+Fördelar: Stark prestanda och bra lokalisering.
+
+Nackdelar: Kräver mer GPU-resurser.
+
+DINOv2 + PatchCore
+Fördelar: Mycket stark modern kombination.
+
+Nackdelar: Kräver kraftfull hårdvara för bästa resultat.
+
+SigLIP2 + AnomalyCLIP
+Fördelar: Utmärkt generalisering till nya PCB-designer.
+
+Nackdelar: Mer komplex pipeline.
+
+Vision Transformer (ViT) AD
+Fördelar: Bra på komplexa visuella mönster.
+
+Nackdelar: Kan vara beräkningstung.
+
+CLIP-AD
+Fördelar: Flexibel och stark på okända fel.
+
+Nackdelar: Kräver ofta noggrann promptdesign.
+
+SimpleNet
+Fördelar: Lättviktig och snabb.
+
+Nackdelar: Lägre maximal precision än toppmodeller.
+
+DeSTSeg
+Fördelar: Kombinerar anomalidetektion och segmentering.
+
+Nackdelar: Mer komplicerad att träna.
+
+RealNet
+Fördelar: Bra på realistiska industrifel.
+
+Nackdelar: Mindre ekosystem och dokumentation.
+
+UniAD
+Fördelar: Universell anomalidetektion över flera domäner.
+
+Nackdelar: Kan kräva stora datamängder.
+
+Rekommenderad ranking för PCB-inspektion
+1. DINOv2 + PatchCore
+2. AnomalyCLIP
+3. PatchCore
+4. WinCLIP
+5. RD4AD
+6. EfficientAD
+7. CFLOW-AD
+8. FastFlow
+9. PaDiM
+10. DRAEM
