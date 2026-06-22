@@ -1,16 +1,11 @@
+# ---------------- GET FRAME ----------------
 if use_oak:
     frame = oak_preview_queue.get().getCvFrame()
 else:
+    if cap is None:
+        return
+
     ret, frame = cap.read()
     if not ret:
         root.after(10, update_frame)
         return
-
-frame = cv2.flip(frame, 1)
-display = frame.copy()
-
-# AI FRAME
-if use_oak:
-    ai_frame = oak_full_queue.get().getCvFrame()
-else:
-    ai_frame = frame
