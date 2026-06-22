@@ -1,0 +1,45 @@
+def find_camera():
+
+    for index in range(10):
+
+        cap = cv2.VideoCapture(index)
+
+        if cap.isOpened():
+
+            ret, frame = cap.read()
+
+            if ret:
+                print(f"Found camera at index {index}")
+                return cap
+
+            cap.release()
+
+    return None
+
+
+def start_camera():
+
+    global cap
+    global running
+
+    if running:
+        return
+
+    cap = find_camera()
+
+    if cap is None:
+
+        messagebox.showerror(
+            "Error",
+            "No camera found"
+        )
+
+        return
+
+    running = True
+
+    status_label.config(
+        text="Camera started"
+    )
+
+    update_frame()
