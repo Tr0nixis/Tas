@@ -1,1 +1,27 @@
+# =========================================================
+# SAFE LAYOUT FIX (PREVENT UI LOCK)
+# =========================================================
 
+main_frame = tk.Frame(root, bg="#1e1e1e")
+main_frame.pack(fill="both", expand=True)
+
+# ---------------- VIDEO FRAME (CONSTRAINED) ----------------
+video_frame = tk.Frame(main_frame, bg="#1e1e1e")
+video_frame.pack(side="top", fill="both", expand=True)
+
+video_label = tk.Label(video_frame, bg="black")
+video_label.pack(pady=10)
+
+# ---------------- STATUS ----------------
+status_label = tk.Label(
+    main_frame,
+    text="Ready",
+    bg="#1e1e1e",
+    fg="lime",
+    font=("Arial", 11)
+)
+status_label.pack()
+
+# ---------------- BUTTONS ----------------
+panel = tk.Frame(main_frame, bg="#1e1e1e")
+panel.pack(pady=10)
