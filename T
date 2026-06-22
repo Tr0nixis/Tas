@@ -4,9 +4,7 @@
     global running
 
     if running:
-        return
-
-    # Try camera indexes 1-9 first
+        
     for index in range(1, 10):
 
         test_cap = cv2.VideoCapture(index)
