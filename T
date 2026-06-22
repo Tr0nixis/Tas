@@ -1,5 +1,5 @@
 # =========================================================
-# SAFE LAYOUT FIX (PREVENT UI LOCK)
+# SAFE LAYOUT FIX 
 # =========================================================
 
 main_frame = tk.Frame(root, bg="#1e1e1e")
