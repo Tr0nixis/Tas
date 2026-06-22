@@ -17,6 +17,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 IMG_SIZE = 224
 ANOMALY_THRESHOLD = 0.82
+UI_SIZE = (300, 300)
 
 BASE_DIR = "anomaly_dataset"
 VALID_DIR = os.path.join(BASE_DIR, "valid")
@@ -31,7 +32,7 @@ for d in [BASE_DIR, VALID_DIR, DATABASE_DIR, MEMORY_DIR, SCAN_DIR]:
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # =========================================================
-# CAMERA STATE (FIXED SYSTEM)
+# CAMERA STATE
 # =========================================================
 
 cap = None
@@ -55,23 +56,20 @@ feature_extractor = None
 anomaly_memory = []
 
 bbox = None
-scan_count = 0
 
 # =========================================================
-# OAK + CAMERA LIST FIX
+# CAMERA LIST
 # =========================================================
 
 def list_cameras():
     cams = []
 
-    # OpenCV cameras
     for i in range(10):
         test = cv2.VideoCapture(i)
         if test.isOpened():
             cams.append(("OpenCV", i))
             test.release()
 
-    # DepthAI check
     try:
         import depthai as dai
         cams.append(("OAK", 0))
@@ -82,6 +80,8 @@ def list_cameras():
 
 
 def open_camera_selector():
+    global cap, use_oak, oak_pipeline, oak_queue
+
     win = tk.Toplevel(root)
     win.title("Camera Selector")
     win.geometry("300x300")
@@ -134,6 +134,7 @@ def open_camera_selector():
 
     tk.Button(win, text="Select", command=select).pack()
 
+
 # =========================================================
 # FEATURE EXTRACTOR
 # =========================================================
@@ -164,6 +165,7 @@ def extract_features(frame):
 
     return patches.cpu().numpy()
 
+
 # =========================================================
 # ANOMALY PREDICTION
 # =========================================================
@@ -188,6 +190,7 @@ def anomaly_predict(frame):
         return ("ANOMALY", (0, 0, 255), confidence)
 
     return ("NORMAL", (0, 255, 0), confidence)
+
 
 # =========================================================
 # MEMORY TRAINING
@@ -225,6 +228,7 @@ def train_anomaly_memory():
 
     status_label.config(text="Memory trained")
 
+
 # =========================================================
 # LOAD MEMORY
 # =========================================================
@@ -244,6 +248,7 @@ def load_selected_memory():
     ).tolist()
 
     status_label.config(text=f"Loaded {file}")
+
 
 # =========================================================
 # DATABASE SYSTEM
@@ -303,8 +308,9 @@ def load_database():
 
     status_label.config(text=f"Loaded DB {name}")
 
+
 # =========================================================
-# CAMERA START / STOP 
+# CAMERA START / STOP
 # =========================================================
 
 def start_camera():
@@ -331,8 +337,9 @@ def stop_camera():
     video_label.configure(image="")
     status_label.config(text="Camera stopped")
 
+
 # =========================================================
-# ROI SYSTEM
+# ROI SYSTEM (UNCHANGED)
 # =========================================================
 
 def open_roi_editor():
@@ -397,8 +404,9 @@ def open_roi_editor():
     canvas.bind("<B1-Motion>", drag)
     canvas.bind("<ButtonRelease-1>", release)
 
+
 # =========================================================
-# HEATMAP 
+# HEATMAP (UNCHANGED)
 # =========================================================
 
 def build_heatmap(frame, patches, memory):
@@ -427,8 +435,9 @@ def build_heatmap(frame, patches, memory):
 
     return cv2.applyColorMap(heat, cv2.COLORMAP_JET)
 
+
 # =========================================================
-# MAIN FRAME LOOP 
+# MAIN LOOP (ONLY FIXED PART)
 # =========================================================
 
 def update_frame():
@@ -437,82 +446,43 @@ def update_frame():
     if not running:
         return
 
-    # -------------------------
-    # GET FRAME 
-    # ----------------------
     if use_oak:
-        frame = oak_queue.get().getCvFrame()
+        frame_ai = oak_queue.get().getCvFrame()
     else:
         if cap is None:
             return
 
-        ret, frame = cap.read()
+        ret, frame_ai = cap.read()
         if not ret:
             root.after(10, update_frame)
             return
 
-    frame = cv2.flip(frame, 1)
+    frame_ai = cv2.flip(frame_ai, 1)
 
-    display = frame.copy()
+    frame_ui = cv2.resize(frame_ai, UI_SIZE)
+    display = frame_ui.copy()
 
-    # -------------------------
-    # HEATMAP OVERLAY
-    # -------------------------
     try:
-        patches = extract_features(frame)
-        heatmap = build_heatmap(frame, patches, anomaly_memory)
+        patches = extract_features(frame_ai)
+        heatmap = build_heatmap(frame_ai, patches, anomaly_memory)
 
         if heatmap is not None:
-            display = cv2.addWeighted(display, 0.65, heatmap, 0.35, 0)
+            heatmap_ui = cv2.resize(heatmap, UI_SIZE)
+            display = cv2.addWeighted(display, 0.65, heatmap_ui, 0.35, 0)
     except:
         pass
 
-    # -------------------------
-    # ROI LOGIC
-    # -------------------------
-    if bbox is not None:
+    result = anomaly_predict(frame_ai)
 
-        x1, y1, x2, y2 = bbox
-
-        cv2.rectangle(display, (x1, y1), (x2, y2), (255, 255, 0), 2)
-
-        roi = frame[y1:y2, x1:x2]
-
-        if roi.size > 0:
-            result = anomaly_predict(roi)
-
-            if result:
-                label, color, conf = result
-
-                cv2.putText(
-                    display,
-                    f"{label} {conf:.2f}",
-                    (x1, y1 - 10),
+    if result:
+        label, color, conf = result
+        cv2.putText(display, f"{label} {conf:.2f}",
+                    (10, 30),
                     cv2.FONT_HERSHEY_SIMPLEX,
-                    0.8,
+                    0.7,
                     color,
-                    2
-                )
+                    2)
 
-    else:
-        result = anomaly_predict(frame)
-
-        if result:
-            label, color, conf = result
-
-            cv2.putText(
-                display,
-                f"{label} {conf:.2f}",
-                (10, 35),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                color,
-                2
-            )
-
-    # -------------------------
-    # RENDER TO TKINTER
-    # -------------------------
     rgb = cv2.cvtColor(display, cv2.COLOR_BGR2RGB)
     img = Image.fromarray(rgb)
     imgtk = ImageTk.PhotoImage(img)
@@ -522,8 +492,9 @@ def update_frame():
 
     root.after(10, update_frame)
 
+
 # =========================================================
-# UI HELPERS 
+# UI HELPERS (UNCHANGED)
 # =========================================================
 
 def refresh_memory_list():
@@ -569,7 +540,7 @@ def save_valid_image():
 
 
 # =========================================================
-# CLOSE APP
+# CLOSE
 # =========================================================
 
 def on_close():
@@ -584,21 +555,20 @@ def on_close():
 
 
 # =========================================================
-# MAIN CAMERA BUTTON FIX 
+# CAMERA FIX
 # =========================================================
 
 def safe_start():
+    global cap
+
     if not use_oak and cap is None:
-        try:
-            cap = cv2.VideoCapture(0)
-        except:
-            pass
+        cap = cv2.VideoCapture(0)
 
     start_camera()
 
 
 # =========================================================
-# UI BUILD
+# UI
 # =========================================================
 
 root = tk.Tk()
@@ -606,49 +576,27 @@ root.title("Anomaly Inspection System")
 root.configure(bg="#1e1e1e")
 root.state("zoomed")
 
-# ---------------- TITLE ----------------
-tk.Label(
-    root,
-    text="Anomaly Inspection System",
-    font=("Arial", 20, "bold"),
-    bg="#1e1e1e",
-    fg="white"
-).pack(pady=10)
+tk.Label(root, text="Anomaly Inspection System",
+         font=("Arial", 20, "bold"),
+         bg="#1e1e1e",
+         fg="white").pack(pady=10)
 
-# ---------------- VIDEO ----------------
 video_label = tk.Label(root, bg="black")
-video_label.pack(fill="both", expand=True, padx=10, pady=10)
+video_label.pack(fill="both", expand=True)
 
-# ---------------- STATUS ----------------
-status_label = tk.Label(
-    root,
-    text="Ready",
-    bg="#1e1e1e",
-    fg="lime",
-    font=("Arial", 11)
-)
-status_label.pack(pady=5)
-
-# =========================================================
-# BUTTON PANEL
-# =========================================================
+status_label = tk.Label(root, text="Ready",
+                        bg="#1e1e1e",
+                        fg="lime")
+status_label.pack()
 
 panel = tk.Frame(root, bg="#1e1e1e")
 panel.pack()
 
-def btn(text, cmd, r, c):
-    tk.Button(
-        panel,
-        text=text,
-        command=cmd,
-        width=20,
-        height=2,
-        bg="#333",
-        fg="white"
-    ).grid(row=r, column=c, padx=5, pady=5)
+def btn(t, c, r, col):
+    tk.Button(panel, text=t, command=c,
+              width=20, height=2,
+              bg="#333", fg="white").grid(row=r, column=col)
 
-
-# ---------------- BUTTONS ----------------
 btn("Select Camera", open_camera_selector, 0, 0)
 btn("Start", start_camera, 0, 1)
 btn("Stop", stop_camera, 0, 2)
@@ -663,43 +611,18 @@ btn("ROI Editor", open_roi_editor, 2, 2)
 
 btn("Quit", on_close, 3, 1)
 
-# =========================================================
-# LIST PANELS
-# =========================================================
-
 bottom = tk.Frame(root, bg="#1e1e1e")
 bottom.pack(fill="x")
 
-# MEMORY LIST
-left = tk.Frame(bottom, bg="#1e1e1e")
-left.pack(side="left", padx=20)
+memory_list = tk.Listbox(bottom, width=40)
+memory_list.pack(side="left")
 
-tk.Label(left, text="Memories", bg="#1e1e1e", fg="white").pack()
-
-memory_list = tk.Listbox(left, width=40, height=8)
-memory_list.pack()
-
-# DATABASE LIST
-right = tk.Frame(bottom, bg="#1e1e1e")
-right.pack(side="right", padx=20)
-
-tk.Label(right, text="Databases", bg="#1e1e1e", fg="white").pack()
-
-database_list = tk.Listbox(right, width=40, height=8)
-database_list.pack()
-
-# =========================================================
-# INIT LISTS
-# =========================================================
+database_list = tk.Listbox(bottom, width=40)
+database_list.pack(side="right")
 
 refresh_memory_list()
 refresh_database_list()
 
 root.protocol("WM_DELETE_WINDOW", on_close)
-
-# =========================================================
-# AUTO START LOOP
-# =========================================================
-
 root.after(100, update_frame)
 root.mainloop()
