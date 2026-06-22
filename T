@@ -1,11 +1,42 @@
-display = frame.copy()
+def select():
+    global cap, use_oak, oak_pipeline, oak_queue
 
-# AI FRAME (separate from preview)
-if use_oak:
-    ai_frame = oak_full_queue.get().getCvFrame()
-else:
-    ai_frame = frame
+    sel = lst.curselection()
+    if not sel:
+        return
 
-try:
-    patches = extract_features(ai_frame)
-    heatmap = build_heatmap(ai_frame, patches, anomaly_memory)
+    cam = cams[sel[0]]
+
+    # ---------------- OAK ----------------
+    if cam[0] == "OAK":
+        import depthai as dai
+
+        use_oak = True
+        oak_pipeline = dai.Pipeline()
+
+        cam_node = oak_pipeline.create(dai.node.Camera)
+
+        full_out = cam_node.requestOutput(
+            (4056, 3040),
+            type=dai.ImgFrame.Type.BGR8888
+        )
+        oak_queue = full_out.createOutputQueue(maxsize=2, blocking=False)
+
+        oak_pipeline.start()
+
+        status_label.config(text="OAK camera selected")
+
+    # ---------------- USB ----------------
+    else:
+        use_oak = False
+        cap = cv2.VideoCapture(cam[1])
+
+        if not cap.isOpened():
+            messagebox.showerror("Error", "Camera failed")
+            return
+
+        status_label.config(text=f"Camera {cam[1]} selected")
+
+    win.destroy()
+
+tk.Button(win, text="Select", command=select).pack()
