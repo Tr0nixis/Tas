@@ -1,47 +1,31 @@
-def select():
-    global cap, use_oak, oak_pipeline, oak_full_queue, oak_preview_queue
+if cam[0] == "OAK":
+    import depthai as dai
 
-    sel = lst.curselection()
-    if not sel:
-        return
+    use_oak = True
+    oak_pipeline = dai.Pipeline()
 
-    cam = cams[sel[0]]
+    cam_node = oak_pipeline.create(dai.node.ColorCamera)
 
-    # ---------------- OAK ----------------
-    if cam[0] == "OAK":
-        import depthai as dai
+    # FULL (AI)
+    cam_node.setPreviewSize(4056, 3040)
+    cam_node.setInterleaved(False)
 
-        use_oak = True
-        oak_pipeline = dai.Pipeline()
+    xout_full = oak_pipeline.create(dai.node.XLinkOut)
+    xout_full.setStreamName("full")
 
-        cam_node = oak_pipeline.create(dai.node.Camera)
+    cam_node.preview.link(xout_full.input)
 
-        # FULL RES (AI)
-        full_out = cam_node.requestOutput(
-            (4056, 3040),
-            type=dai.ImgFrame.Type.BGR8888
-        )
-        oak_full_queue = full_out.createOutputQueue(maxsize=2, blocking=False)
+    # PREVIEW (UI)
+    cam_node.setPreviewSize(1280, 960)
 
-        # PREVIEW (UI)
-        preview_out = cam_node.requestOutput(
-            (1280, 960),
-            type=dai.ImgFrame.Type.BGR8888
-        )
-        oak_preview_queue = preview_out.createOutputQueue(maxsize=2, blocking=False)
+    xout_preview = oak_pipeline.create(dai.node.XLinkOut)
+    xout_preview.setStreamName("preview")
 
-        oak_pipeline.start()
-        status_label.config(text="OAK camera selected")
+    cam_node.preview.link(xout_preview.input)
 
-    # ---------------- USB ----------------
-    else:
-        use_oak = False
-        cap = cv2.VideoCapture(cam[1])
+    device = dai.Device(oak_pipeline)
 
-        if not cap.isOpened():
-            messagebox.showerror("Error", "Camera failed")
-            return
+    oak_full_queue = device.getOutputQueue("full", maxSize=2, blocking=False)
+    oak_preview_queue = device.getOutputQueue("preview", maxSize=2, blocking=False)
 
-        status_label.config(text=f"Camera {cam[1]} selected")
-
-    win.destroy()
+    status_label.config(text="OAK camera selected")
