@@ -1,39 +1,47 @@
-# ---------------- OAK ----------------
-if cam[0] == "OAK":
-    import depthai as dai
+def select():
+    global cap, use_oak, oak_pipeline, oak_full_queue, oak_preview_queue
 
-    use_oak = True
-    oak_pipeline = dai.Pipeline()
-
-    cam_node = oak_pipeline.create(dai.node.Camera)
-
-    # FULL RESOLUTION (AI)
-    full_out = cam_node.requestOutput(
-        (4056, 3040),
-        type=dai.ImgFrame.Type.BGR8888
-    )
-    oak_full_queue = full_out.createOutputQueue(maxsize=2, blocking=False)
-
-    # PREVIEW (UI)
-    preview_out = cam_node.requestOutput(
-        (1280, 960),
-        type=dai.ImgFrame.Type.BGR8888
-    )
-    oak_preview_queue = preview_out.createOutputQueue(maxsize=2, blocking=False)
-
-    oak_pipeline.start()
-
-    status_label.config(text="OAK camera selected")
-
-# ---------------- USB ----------------
-else:
-    use_oak = False
-    cap = cv2.VideoCapture(cam[1])
-
-    if not cap.isOpened():
-        messagebox.showerror("Error", "Camera failed")
+    sel = lst.curselection()
+    if not sel:
         return
 
-    status_label.config(text=f"Camera {cam[1]} selected")
+    cam = cams[sel[0]]
 
-win.destroy()
+    # ---------------- OAK ----------------
+    if cam[0] == "OAK":
+        import depthai as dai
+
+        use_oak = True
+        oak_pipeline = dai.Pipeline()
+
+        cam_node = oak_pipeline.create(dai.node.Camera)
+
+        # FULL RES (AI)
+        full_out = cam_node.requestOutput(
+            (4056, 3040),
+            type=dai.ImgFrame.Type.BGR8888
+        )
+        oak_full_queue = full_out.createOutputQueue(maxsize=2, blocking=False)
+
+        # PREVIEW (UI)
+        preview_out = cam_node.requestOutput(
+            (1280, 960),
+            type=dai.ImgFrame.Type.BGR8888
+        )
+        oak_preview_queue = preview_out.createOutputQueue(maxsize=2, blocking=False)
+
+        oak_pipeline.start()
+        status_label.config(text="OAK camera selected")
+
+    # ---------------- USB ----------------
+    else:
+        use_oak = False
+        cap = cv2.VideoCapture(cam[1])
+
+        if not cap.isOpened():
+            messagebox.showerror("Error", "Camera failed")
+            return
+
+        status_label.config(text=f"Camera {cam[1]} selected")
+
+    win.destroy()
