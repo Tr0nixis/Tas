@@ -1,11 +1,512 @@
-cam_node = oak_pipeline.create(dai.node.Camera).build()
+import os
+import cv2
+import torch
+import numpy as np
+import tkinter as tk
+import threading
+import platform
 
-# FULL RES (for processing)
-full_res = cam_node.requestOutput((4056, 3040), type=dai.ImgFrame.Type.BGR888i)
-full_queue = full_res.createOutputQueue(maxSize=2, blocking=False)
+from tkinter import messagebox, simpledialog
+from PIL import Image, ImageTk
 
-# PREVIEW (for UI ONLY)
-preview = cam_node.requestOutput((1280, 720), type=dai.ImgFrame.Type.BGR888i)
-preview_queue = preview.createOutputQueue(maxSize=2, blocking=False)
+from torchvision import models, transforms
+from torch import nn
+from sklearn.metrics.pairwise import cosine_similarity
 
-oak_pipeline.start()
+# =========================================================
+# CONFIG
+# =========================================================
+
+IMG_SIZE = 224
+ANOMALY_THRESHOLD = 0.82
+
+BASE_DIR = "anomaly_dataset"
+VALID_DIR = os.path.join(BASE_DIR, "valid")
+
+DATABASE_DIR = "anomaly_databases"
+MEMORY_DIR = "anomaly_memories"
+SCAN_DIR = "saved_scans"
+
+for d in [BASE_DIR, VALID_DIR, DATABASE_DIR, MEMORY_DIR, SCAN_DIR]:
+    os.makedirs(d, exist_ok=True)
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# =========================================================
+# CAMERA STATE
+# =========================================================
+
+cap = None
+running = False
+use_oak = False
+
+oak_pipeline = None
+oak_queue = None
+
+# =========================================================
+# AUTO DEFECT STATE
+# =========================================================
+
+last_auto_save = 0
+AUTO_SAVE_COOLDOWN = 2.0  # seconds
+
+# =========================================================
+# MODEL
+# =========================================================
+
+transform = transforms.Compose([
+    transforms.ToPILImage(),
+    transforms.Resize((IMG_SIZE, IMG_SIZE)),
+    transforms.ToTensor()
+])
+
+feature_extractor = None
+anomaly_memory = []
+
+bbox = None
+scan_count = 0
+
+# =========================================================
+# UTIL: SAFE DISPLAY RESIZE (IMPORTANT FIX)
+# =========================================================
+
+def resize_for_display(frame):
+    h, w = frame.shape[:2]
+
+    max_w = 900
+    max_h = 600
+
+    scale = min(max_w / w, max_h / h)
+
+    if scale < 1:
+        frame = cv2.resize(frame, (int(w * scale), int(h * scale)))
+
+    return frame
+
+# =========================================================
+# OAK + CAMERA
+# =========================================================
+
+def list_cameras():
+    cams = []
+
+    for i in range(5):
+        test = cv2.VideoCapture(i)
+        if test.isOpened():
+            cams.append(("OpenCV", i))
+            test.release()
+
+    try:
+        import depthai as dai
+        cams.append(("OAK", 0))
+    except:
+        pass
+
+    return cams
+
+
+def open_camera_selector():
+    win = tk.Toplevel(root)
+    win.title("Camera Selector")
+    win.geometry("300x300")
+
+    tk.Label(win, text="Select Camera").pack()
+
+    lst = tk.Listbox(win)
+    lst.pack(fill="both", expand=True)
+
+    cams = list_cameras()
+
+    for c in cams:
+        lst.insert(tk.END, f"{c[0]} - {c[1]}")
+
+    def select():
+        global cap, use_oak, oak_pipeline, oak_queue
+
+        sel = lst.curselection()
+        if not sel:
+            return
+
+        cam = cams[sel[0]]
+
+        if cam[0] == "OAK":
+            import depthai as dai
+
+            use_oak = True
+            oak_pipeline = dai.Pipeline()
+
+            cam_node = oak_pipeline.create(dai.node.Camera).build()
+
+            # FIX: still high res capture, but we DOWNSCALE later
+            out = cam_node.requestOutput((4056, 3040),
+                                         type=dai.ImgFrame.Type.BGR888i)
+
+            oak_queue = out.createOutputQueue(maxSize=2, blocking=False)
+            oak_pipeline.start()
+
+            status_label.config(text="OAK selected")
+
+        else:
+            use_oak = False
+            cap = cv2.VideoCapture(cam[1])
+
+            if not cap.isOpened():
+                messagebox.showerror("Error", "Camera failed")
+                return
+
+            status_label.config(text=f"Camera {cam[1]} selected")
+
+        win.destroy()
+
+    tk.Button(win, text="Select", command=select).pack()
+
+
+# =========================================================
+# FEATURE MODEL
+# =========================================================
+
+def create_feature_extractor():
+    model = models.efficientnet_b0(weights=models.EfficientNet_B0_Weights.DEFAULT)
+    extractor = nn.Sequential(*list(model.children())[:-2])
+    extractor.eval()
+    return extractor.to(device)
+
+
+def extract_features(frame):
+    global feature_extractor
+
+    if feature_extractor is None:
+        feature_extractor = create_feature_extractor()
+
+    img = transform(frame).unsqueeze(0).to(device)
+
+    with torch.no_grad():
+        feat = feature_extractor(img)
+
+    feat = feat.squeeze(0)
+    patches = feat.permute(1, 2, 0).reshape(-1, feat.shape[0])
+
+    return patches.cpu().numpy()
+
+
+# =========================================================
+# ANOMALY
+# =========================================================
+
+def anomaly_predict(frame):
+    global anomaly_memory
+
+    if len(anomaly_memory) == 0:
+        return None
+
+    patches = extract_features(frame)
+
+    scores = []
+
+    for p in patches:
+        sim = cosine_similarity([p], anomaly_memory)[0]
+        scores.append(np.max(sim))
+
+    confidence = float(np.mean(scores))
+
+    if confidence < ANOMALY_THRESHOLD:
+        return ("ANOMALY", (0, 0, 255), confidence)
+
+    return ("NORMAL", (0, 255, 0), confidence)
+
+
+# =========================================================
+# AUTO DEFECT SAVE (NEW FEATURE)
+# =========================================================
+
+def auto_save_defect(frame, label):
+    global last_auto_save, scan_count
+
+    import time
+    now = time.time()
+
+    if label != "ANOMALY":
+        return
+
+    if now - last_auto_save < AUTO_SAVE_COOLDOWN:
+        return
+
+    last_auto_save = now
+
+    filename = os.path.join(SCAN_DIR, f"auto_defect_{scan_count}.jpg")
+    cv2.imwrite(filename, frame)
+
+    scan_count += 1
+    status_label.config(text=f"Auto saved defect {scan_count}")
+
+
+# =========================================================
+# MEMORY TRAINING
+# =========================================================
+
+def train_anomaly_memory():
+    global anomaly_memory
+
+    name = simpledialog.askstring("Memory Name", "Enter memory name")
+    if not name:
+        return
+
+    files = os.listdir(VALID_DIR)
+
+    if len(files) < 10:
+        messagebox.showwarning("Warning", "Need at least 10 images")
+        return
+
+    anomaly_memory.clear()
+
+    status_label.config(text="Training...")
+    root.update()
+
+    for f in files:
+        img = cv2.imread(os.path.join(VALID_DIR, f))
+        if img is None:
+            continue
+
+        anomaly_memory.extend(extract_features(img))
+
+    np.save(os.path.join(MEMORY_DIR, f"{name}.npy"),
+            np.array(anomaly_memory))
+
+    refresh_memory_list()
+    status_label.config(text="Memory trained")
+
+
+# =========================================================
+# LOAD MEMORY
+# =========================================================
+
+def load_selected_memory():
+    global anomaly_memory
+
+    sel = memory_list.curselection()
+    if not sel:
+        return
+
+    file = memory_list.get(sel[0])
+
+    anomaly_memory = np.load(
+        os.path.join(MEMORY_DIR, file),
+        allow_pickle=True
+    ).tolist()
+
+    status_label.config(text=f"Loaded {file}")
+
+
+# =========================================================
+# DATABASE
+# =========================================================
+
+def create_database():
+    name = simpledialog.askstring("DB", "Enter name")
+    if not name:
+        return
+
+    path = os.path.join(DATABASE_DIR, name)
+
+    if os.path.exists(path):
+        return
+
+    os.makedirs(os.path.join(path, "valid"))
+
+    import shutil
+
+    for f in os.listdir(VALID_DIR):
+        shutil.copy(os.path.join(VALID_DIR, f),
+                    os.path.join(path, "valid", f))
+
+    for f in os.listdir(VALID_DIR):
+        os.remove(os.path.join(VALID_DIR, f))
+
+    refresh_database_list()
+
+
+def load_database():
+    sel = database_list.curselection()
+    if not sel:
+        return
+
+    name = database_list.get(sel[0])
+    path = os.path.join(DATABASE_DIR, name, "valid")
+
+    import shutil
+
+    for f in os.listdir(VALID_DIR):
+        os.remove(os.path.join(VALID_DIR, f))
+
+    for f in os.listdir(path):
+        shutil.copy(os.path.join(path, f), VALID_DIR)
+
+    status_label.config(text=f"Loaded {name}")
+
+
+# =========================================================
+# CAMERA LOOP
+# =========================================================
+
+def update_frame():
+    global running
+
+    if not running:
+        return
+
+    if use_oak:
+        frame = oak_queue.get().getCvFrame()
+    else:
+        ret, frame = cap.read()
+        if not ret:
+            root.after(10, update_frame)
+            return
+
+    frame = cv2.flip(frame, 1)
+
+    # FIX: OAK / FULL HD -> SAFE DISPLAY SIZE
+    display = resize_for_display(frame.copy())
+
+    result = anomaly_predict(frame)
+
+    if result:
+        label, color, conf = result
+
+        auto_save_defect(frame, label)
+
+        cv2.putText(display,
+                    f"{label} {conf:.2f}",
+                    (20, 40),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    color,
+                    2)
+
+    rgb = cv2.cvtColor(display, cv2.COLOR_BGR2RGB)
+    img = Image.fromarray(rgb)
+
+    imgtk = ImageTk.PhotoImage(img)
+
+    video_label.imgtk = imgtk
+    video_label.configure(image=imgtk)
+
+    root.after(15, update_frame)
+
+
+# =========================================================
+# SCAN FOLDER OPEN (NEW BUTTON FEATURE)
+# =========================================================
+
+def open_scan_folder():
+    path = os.path.abspath(SCAN_DIR)
+
+    if platform.system() == "Windows":
+        os.startfile(path)
+    elif platform.system() == "Darwin":
+        os.system(f"open {path}")
+    else:
+        os.system(f"xdg-open {path}")
+
+
+# =========================================================
+# START / STOP
+# =========================================================
+
+def start_camera():
+    global running, cap
+
+    running = True
+
+    if not use_oak and cap is None:
+        cap = cv2.VideoCapture(0)
+
+    status_label.config(text="Running")
+    update_frame()
+
+
+def stop_camera():
+    global running, cap
+
+    running = False
+
+    if cap:
+        cap.release()
+        cap = None
+
+    video_label.configure(image="")
+    status_label.config(text="Stopped")
+
+
+# =========================================================
+# UI
+# =========================================================
+
+root = tk.Tk()
+root.title("Anomaly System")
+root.state("zoomed")
+root.configure(bg="#1e1e1e")
+
+tk.Label(root,
+         text="Anomaly Inspection System",
+         bg="#1e1e1e",
+         fg="white",
+         font=("Arial", 18)).pack()
+
+video_label = tk.Label(root, bg="black")
+video_label.pack(expand=True, fill="both")
+
+status_label = tk.Label(root, text="Ready", fg="lime", bg="#1e1e1e")
+status_label.pack()
+
+
+panel = tk.Frame(root, bg="#1e1e1e")
+panel.pack()
+
+
+def btn(t, c, r, col):
+    tk.Button(panel, text=t, command=c,
+              width=18, height=2,
+              bg="#333", fg="white").grid(row=r, column=col, padx=5, pady=5)
+
+
+btn("Camera", open_camera_selector, 0, 0)
+btn("Start", start_camera, 0, 1)
+btn("Stop", stop_camera, 0, 2)
+
+btn("Train", train_anomaly_memory, 1, 0)
+btn("Load Mem", load_selected_memory, 1, 1)
+btn("Create DB", create_database, 1, 2)
+
+btn("Load DB", load_database, 2, 0)
+btn("Scan Folder", open_scan_folder, 2, 1)
+btn("Quit", lambda: root.destroy(), 2, 2)
+
+# lists
+bottom = tk.Frame(root, bg="#1e1e1e")
+bottom.pack()
+
+memory_list = tk.Listbox(bottom, width=40)
+memory_list.pack(side="left")
+
+database_list = tk.Listbox(bottom, width=40)
+database_list.pack(side="right")
+
+
+def refresh_memory_list():
+    memory_list.delete(0, tk.END)
+    for f in os.listdir(MEMORY_DIR):
+        if f.endswith(".npy"):
+            memory_list.insert(tk.END, f)
+
+
+def refresh_database_list():
+    database_list.delete(0, tk.END)
+    for d in os.listdir(DATABASE_DIR):
+        database_list.insert(tk.END, d)
+
+
+refresh_memory_list()
+refresh_database_list()
+
+root.after(100, update_frame)
+root.mainloop()
