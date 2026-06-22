@@ -1,44 +1,35 @@
 def start_camera():
 
-    global cap
-    global running
+    global cap, running
 
     if running:
         return
 
-    found = False
+    # -----------------------------
+    # Create DepthAI pipeline
+    # -----------------------------
+    pipeline = dai.Pipeline()
 
-    for index in range(10):
+    cam = pipeline.createColorCamera()
+    cam.setPreviewSize(640, 480)
+    cam.setInterleaved(False)
+    cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
 
-        test_cap = cv2.VideoCapture(index)
+    xout = pipeline.createXLinkOut()
+    xout.setStreamName("video")
 
-        if test_cap.isOpened():
+    cam.preview.link(xout.input)
 
-            ret, frame = test_cap.read()
+    # -----------------------------
+    # Start device
+    # -----------------------------
+    device = dai.Device(pipeline)
+    q = device.getOutputQueue(name="video", maxSize=4, blocking=False)
 
-            if ret:
-
-                print(f"Found camera {index}")
-
-                cap = test_cap
-                found = True
-
-                status_label.config(
-                    text=f"Camera {index} started"
-                )
-
-                break
-
-            test_cap.release()
-
-    if not found:
-
-        messagebox.showerror(
-            "Error",
-            "No camera found"
-        )
-
-        return
+    # store in global cap (we fake OpenCV style)
+    cap = q
 
     running = True
+    status_label.config(text="OAK-1 camera started")
+
     update_frame()
