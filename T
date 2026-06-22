@@ -1,35 +1,42 @@
-def start_camera():
+def select_camera():
 
-    global cap, running
+    win = tk.Toplevel(root)
+    win.title("Select Camera")
+    win.geometry("300x200")
 
-    if running:
-        return
+    tk.Label(
+        win,
+        text="Enter camera index (0, 1, 2...)",
+        font=("Arial", 12)
+    ).pack(pady=10)
 
-    # -----------------------------
-    # Create DepthAI pipeline
-    # -----------------------------
-    pipeline = dai.Pipeline()
+    entry = tk.Entry(win)
+    entry.pack(pady=5)
 
-    cam = pipeline.createColorCamera()
-    cam.setPreviewSize(640, 480)
-    cam.setInterleaved(False)
-    cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
+    def start_selected():
 
-    xout = pipeline.createXLinkOut()
-    xout.setStreamName("video")
+        global cap, running
 
-    cam.preview.link(xout.input)
+        try:
+            index = int(entry.get())
+        except:
+            messagebox.showerror("Error", "Invalid camera index")
+            return
 
-    # -----------------------------
-    # Start device
-    # -----------------------------
-    device = dai.Device(pipeline)
-    q = device.getOutputQueue(name="video", maxSize=4, blocking=False)
+        cap = cv2.VideoCapture(index)
 
-    # store in global cap (we fake OpenCV style)
-    cap = q
+        if not cap.isOpened():
+            messagebox.showerror("Error", f"Camera {index} not found")
+            return
 
-    running = True
-    status_label.config(text="OAK-1 camera started")
+        running = True
+        status_label.config(text=f"Camera {index} started")
 
-    update_frame()
+        win.destroy()
+        update_frame()
+
+    tk.Button(
+        win,
+        text="Start Camera",
+        command=start_selected
+    ).pack(pady=10)
