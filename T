@@ -1,31 +1,16 @@
-if cam[0] == "OAK":
-    import depthai as dai
+if use_oak:
+    frame = oak_preview_queue.get().getCvFrame()
+else:
+    ret, frame = cap.read()
+    if not ret:
+        root.after(10, update_frame)
+        return
 
-    use_oak = True
-    oak_pipeline = dai.Pipeline()
+frame = cv2.flip(frame, 1)
+display = frame.copy()
 
-    cam_node = oak_pipeline.create(dai.node.ColorCamera)
-
-    # FULL (AI)
-    cam_node.setPreviewSize(4056, 3040)
-    cam_node.setInterleaved(False)
-
-    xout_full = oak_pipeline.create(dai.node.XLinkOut)
-    xout_full.setStreamName("full")
-
-    cam_node.preview.link(xout_full.input)
-
-    # PREVIEW (UI)
-    cam_node.setPreviewSize(1280, 960)
-
-    xout_preview = oak_pipeline.create(dai.node.XLinkOut)
-    xout_preview.setStreamName("preview")
-
-    cam_node.preview.link(xout_preview.input)
-
-    device = dai.Device(oak_pipeline)
-
-    oak_full_queue = device.getOutputQueue("full", maxSize=2, blocking=False)
-    oak_preview_queue = device.getOutputQueue("preview", maxSize=2, blocking=False)
-
-    status_label.config(text="OAK camera selected")
+# AI FRAME
+if use_oak:
+    ai_frame = oak_full_queue.get().getCvFrame()
+else:
+    ai_frame = frame
