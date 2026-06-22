@@ -1,27 +1,11 @@
-if cam[0] == "OAK":
-    import depthai as dai
+display = frame.copy()
 
-    use_oak = True
+# AI FRAME (separate from preview)
+if use_oak:
+    ai_frame = oak_full_queue.get().getCvFrame()
+else:
+    ai_frame = frame
 
-    oak_pipeline = dai.Pipeline()
-
-    cam_node = oak_pipeline.create(dai.node.Camera)
-
-    # FULL RES (AI STREAM)
-    full_out = cam_node.requestOutput(
-        (4056, 3040),
-        type=dai.ImgFrame.Type.BGR8888
-    )
-
-    oak_full_queue = full_out.createOutputQueue(maxsize=2, blocking=False)
-
-    # PREVIEW STREAM (UI ONLY)
-    preview_out = cam_node.requestOutput(
-        (1280, 960),
-        type=dai.ImgFrame.Type.BGR8888
-    )
-
-    oak_preview_queue = preview_out.createOutputQueue(maxsize=2, blocking=False)
-
-    oak_pipeline.start()
-    status_label.config(text="OAK camera selected")
+try:
+    patches = extract_features(ai_frame)
+    heatmap = build_heatmap(ai_frame, patches, anomaly_memory)
