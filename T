@@ -6,22 +6,26 @@ def start_camera():
     if running:
         return
 
-    camera_index = simpledialog.askinteger(
-        "Camera",
-        "Enter camera index (0, 1, 2, etc):",
-        initialvalue=0
-    )
-
-    if camera_index is None:
-        return
-
-    cap = cv2.VideoCapture(camera_index)
+    cap = cv2.VideoCapture(CAMERA_INDEX)
 
     if not cap.isOpened():
 
         messagebox.showerror(
             "Error",
-            f"Camera {camera_index} not found"
+            f"Camera {CAMERA_INDEX} not found"
+        )
+
+        return
+
+    ret, frame = cap.read()
+
+    if not ret:
+
+        cap.release()
+
+        messagebox.showerror(
+            "Error",
+            f"Camera {CAMERA_INDEX} opened but returned no image"
         )
 
         return
@@ -29,7 +33,7 @@ def start_camera():
     running = True
 
     status_label.config(
-        text=f"Camera {camera_index} started"
+        text=f"Camera {CAMERA_INDEX} started"
     )
 
     update_frame()
