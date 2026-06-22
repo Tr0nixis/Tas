@@ -1,4 +1,4 @@
-def start_camera():
+ def start_camera():
 
     global cap
     global running
@@ -6,26 +6,39 @@ def start_camera():
     if running:
         return
 
-    cap = cv2.VideoCapture(CAMERA_INDEX)
+    # Try camera indexes 1-9 first
+    for index in range(1, 10):
+
+        test_cap = cv2.VideoCapture(index)
+
+        if test_cap.isOpened():
+
+            ret, frame = test_cap.read()
+
+            if ret:
+
+                cap = test_cap
+
+                running = True
+
+                status_label.config(
+                    text=f"Camera {index} started"
+                )
+
+                update_frame()
+
+                return
+
+            test_cap.release()
+
+    # Fallback to webcam
+    cap = cv2.VideoCapture(0)
 
     if not cap.isOpened():
 
         messagebox.showerror(
             "Error",
-            f"Camera {CAMERA_INDEX} not found"
-        )
-
-        return
-
-    ret, frame = cap.read()
-
-    if not ret:
-
-        cap.release()
-
-        messagebox.showerror(
-            "Error",
-            f"Camera {CAMERA_INDEX} opened but returned no image"
+            "No camera found"
         )
 
         return
@@ -33,7 +46,7 @@ def start_camera():
     running = True
 
     status_label.config(
-        text=f"Camera {CAMERA_INDEX} started"
+        text="Using webcam (camera 0)"
     )
 
     update_frame()
