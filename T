@@ -1,5 +1,5 @@
 def start_camera():
-    global cap, running, use_oak, oak_queue
+    global cap, running, use_oak, oak_device, oak_queue
 
     if running:
         return
@@ -18,7 +18,7 @@ def start_camera():
         test.release()
 
     # =====================================================
-    # OAK CAMERA DETECTION (REAL)
+    # OAK CAMERA DETECTION
     # =====================================================
     try:
         import depthai as dai
@@ -37,7 +37,7 @@ def start_camera():
         return
 
     # =====================================================
-    # USER SELECTION MENU
+    # SELECTION MENU
     # =====================================================
     menu_text = "Available cameras:\n\n"
     for i, cam in enumerate(available):
@@ -56,7 +56,7 @@ def start_camera():
     cam_type, cam_name, cam_data = available[choice]
 
     # =====================================================
-    # OAK START
+    # OAK START (FIXED + STABLE)
     # =====================================================
     if cam_type == "OAK":
         import depthai as dai
@@ -75,10 +75,10 @@ def start_camera():
 
         cam_rgb.preview.link(xout.input)
 
-        device = dai.Device(pipeline, cam_data)
-
-        oak_queue = device.getOutputQueue(
-            name="video",
+        # IMPORTANT: keep device GLOBAL so it does NOT die
+        oak_device = dai.Device(pipeline, cam_data)
+        oak_queue = oak_device.getOutputQueue(
+            "video",
             maxSize=4,
             blocking=False
         )
@@ -88,7 +88,7 @@ def start_camera():
         status_label.config(text=f"{cam_name} started")
 
     # =====================================================
-    # USB START
+    # USB START (FIXED)
     # =====================================================
     else:
         use_oak = False
@@ -96,7 +96,7 @@ def start_camera():
         cap = cv2.VideoCapture(cam_data)
 
         if not cap.isOpened():
-            messagebox.showerror("Error", "Failed to open USB camera")
+            messagebox.showerror("Error", f"Failed to open {cam_name}")
             return
 
         status_label.config(text=f"{cam_name} started")
