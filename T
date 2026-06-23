@@ -1,111 +1,82 @@
-def update_frame():
-    global running, cap, use_oak, oak_queue, bbox
+def start_camera():
+    global cap, running, use_oak, oak_device, oak_queue
 
-    if not running:
+    if running:
         return
 
-    # -------------------------
-    # GET FRAME (USB or OAK)
-    # -------------------------
-    if use_oak:
-        if oak_queue is None:
-            root.after(10, update_frame)
-            return
+    available = []
 
-        frame = oak_queue.get().getCvFrame()
+    # ---------------- USB cameras ----------------
+    for i in range(10):
+        test = cv2.VideoCapture(i)
+        if test.isOpened():
+            available.append(("USB", i))
+        test.release()
 
-    else:
-        if cap is None:
-            return
-
-        ret, frame = cap.read()
-        if not ret:
-            root.after(10, update_frame)
-            return
-
-    # -------------------------
-    # PREPROCESS
-    # -------------------------
-    frame = cv2.flip(frame, 1)
-    ai_frame = frame.copy()
-
-    # UI size (what user sees)
-    display = cv2.resize(frame, (300, 300))
-
-    # -------------------------
-    # HEATMAP OVERLAY (SAFE VERSION)
-    # -------------------------
+    # ---------------- OAK cameras ----------------
     try:
-        patches = extract_features(ai_frame)
-        heatmap = build_heatmap(ai_frame, patches, anomaly_memory)
+        import depthai as dai
+        devices = dai.Device.getAllAvailableDevices()
 
-        if heatmap is not None:
-            heatmap_small = cv2.resize(heatmap, (300, 300))
-            display = cv2.addWeighted(display, 0.65, heatmap_small, 0.35, 0)
-    except Exception as e:
-        pass  # keep UI alive even if ML fails
+        for idx, d in enumerate(devices):
+            available.append(("OAK", idx))
+    except:
+        pass
 
-    # -------------------------
-    # ROI LOGIC
-    # -------------------------
-    if bbox is not None:
-        x1, y1, x2, y2 = bbox
+    if not available:
+        messagebox.showerror("Error", "No cameras found")
+        return
 
-        # scale ROI from full frame space (NOT display space)
-        h, w = ai_frame.shape[:2]
+    choice = simpledialog.askinteger(
+        "Select Camera",
+        "\n".join([f"{i}: {a[0]}-{a[1]}" for i, a in enumerate(available)]),
+        minvalue=0,
+        maxvalue=len(available) - 1
+    )
 
-        x1 = int(x1 * w / 300)
-        y1 = int(y1 * h / 300)
-        x2 = int(x2 * w / 300)
-        y2 = int(y2 * h / 300)
+    if choice is None:
+        return
 
-        x1, y1 = max(0, x1), max(0, y1)
-        x2, y2 = min(w, x2), min(h, y2)
+    cam_type, cam_id = available[choice]
 
-        cv2.rectangle(display, (x1, y1), (x2, y2), (255, 255, 0), 2)
+    # ================= OAK =================
+    if cam_type == "OAK":
+        import depthai as dai
 
-        roi = ai_frame[y1:y2, x1:x2]
+        use_oak = True
 
-        if roi.size > 0:
-            result = anomaly_predict(roi)
+        pipeline = dai.Pipeline()
 
-            if result:
-                label, color, conf = result
+        cam_rgb = pipeline.create(dai.node.ColorCamera)
+        cam_rgb.setPreviewSize(640, 480)
+        cam_rgb.setInterleaved(False)
+        cam_rgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
 
-                cv2.putText(
-                    display,
-                    f"{label} {conf:.2f}",
-                    (x1, max(20, y1 - 10)),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.7,
-                    color,
-                    2
-                )
+        xout = pipeline.create(dai.node.XLinkOut)
+        xout.setStreamName("video")
 
+        cam_rgb.preview.link(xout.input)
+
+        oak_device = dai.Device(pipeline)
+        oak_queue = oak_device.getOutputQueue(
+            name="video",
+            maxSize=4,
+            blocking=False
+        )
+
+        cap = None
+        status_label.config(text=f"OAK-{choice} started")
+
+    # ================= USB =================
     else:
-        result = anomaly_predict(ai_frame)
+        use_oak = False
+        cap = cv2.VideoCapture(cam_id)
 
-        if result:
-            label, color, conf = result
+        if not cap.isOpened():
+            messagebox.showerror("Error", "Failed to open USB camera")
+            return
 
-            cv2.putText(
-                display,
-                f"{label} {conf:.2f}",
-                (10, 35),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.9,
-                color,
-                2
-            )
+        status_label.config(text=f"USB camera {cam_id} started")
 
-    # -------------------------
-    # RENDER TO TKINTER
-    # -------------------------
-    rgb = cv2.cvtColor(display, cv2.COLOR_BGR2RGB)
-    img = Image.fromarray(rgb)
-    imgtk = ImageTk.PhotoImage(img)
-
-    video_label.imgtk = imgtk
-    video_label.configure(image=imgtk)
-
-    root.after(10, update_frame)
+    running = True
+    update_frame()
