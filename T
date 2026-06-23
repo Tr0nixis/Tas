@@ -1,23 +1,38 @@
-if cam_type == "OAK":
-    import depthai as dai
+# =========================================================
+# HEAT MAP (CLEAN FIXED VERSION)
+# =========================================================
 
-    use_oak = True
+def build_heatmap(frame, patches, anomaly_memory):
 
-    pipeline = dai.Pipeline()
+    # safety checks
+    if anomaly_memory is None or len(anomaly_memory) == 0:
+        return None
 
-    cam = pipeline.create(dai.node.ColorCamera)
-    cam.setPreviewSize(640, 480)
-    cam.setInterleaved(False)
-    cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
+    if patches is None or len(patches) == 0:
+        return None
 
-    xout = pipeline.create(dai.node.XLinkOut)
-    xout.setStreamName("video")
+    h, w, _ = frame.shape
 
-    cam.preview.link(xout.input)
+    scores = []
 
-    oak_device = dai.Device(pipeline)
-    oak_queue = oak_device.getOutputQueue("video", maxSize=4, blocking=False)
+    for p in patches:
+        sim = cosine_similarity([p], anomaly_memory)[0]
+        scores.append(1.0 - np.max(sim))
 
-    cap = None
+    # need enough data to form a grid
+    if len(scores) < 9:
+        return None
 
-    status_label.config(text="OAK camera started")
+    side = int(np.sqrt(len(scores)))
+    if side < 2:
+        return None
+
+    scores = np.array(scores[:side * side])
+    heat = scores.reshape(side, side)
+
+    heat = cv2.resize(heat, (w, h), interpolation=cv2.INTER_LINEAR)
+
+    heat = cv2.normalize(heat, None, 0, 255, cv2.NORM_MINMAX)
+    heat = heat.astype(np.uint8)
+
+    return cv2.applyColorMap(heat, cv2.COLORMAP_JET)
