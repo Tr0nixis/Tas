@@ -1,89 +1,46 @@
-# =========================================================
-# SAVED ROI / CROP CONFIG
-# =========================================================
+def train_anomaly_memory():
 
-CROP_FILE = Path("crop_config.json")
+    global anomaly_memory
 
-def load_crop():
-
-    global bbox
-
-    if CROP_FILE.exists():
-
-        try:
-
-            with open(CROP_FILE, "r") as f:
-
-                data = json.load(f)
-
-            bbox = (
-                data["x1"],
-                data["y1"],
-                data["x2"],
-                data["y2"]
-            )
-
-            print("Crop loaded")
-
-        except Exception as e:
-
-            print("Failed loading crop:", e)
-
-def save_crop():
-
-    global bbox
-
-    if bbox is None:
+    name = simpledialog.askstring("Memory Name", "Enter memory name")
+    if not name:
         return
 
-    with open(CROP_FILE, "w") as f:
+    files = os.listdir(VALID_DIR)
 
-        json.dump(
-            {
-                "x1": bbox[0],
-                "y1": bbox[1],
-                "x2": bbox[2],
-                "y2": bbox[3]
-            },
-            f
-        )
+    if len(files) < 10:
+        messagebox.showwarning("Warning", "Need at least 10 images")
+        return
 
-def reset_crop():
+    anomaly_memory.clear()
 
-    global bbox
+    status_label.config(text="Training memory...")
+    root.update()
 
-    bbox = None
+    total = 0
 
-    if CROP_FILE.exists():
-        CROP_FILE.unlink()
+    for i, f in enumerate(files):
 
-    status_label.config(
-        text="ROI reset"
+        path = os.path.join(VALID_DIR, f)
+        img = cv2.imread(path)
+
+        if img is None:
+            continue
+
+        # 🔥 DEBUG (so you SEE progress)
+        status_label.config(text=f"Training {i+1}/{len(files)}")
+        root.update()
+
+        feats = extract_features(img)
+
+        anomaly_memory.extend(feats)
+        total += len(feats)
+
+    np.save(
+        os.path.join(MEMORY_DIR, f"{name}.npy"),
+        np.array(anomaly_memory)
     )
 
-# =========================================================
-# OPEN SCANS FOLDER
-# =========================================================
+    refresh_memory_list()
 
-def open_scans_folder():
-
-    try:
-
-        path = os.path.abspath(SCAN_DIR)
-
-        if os.name == "nt":
-
-            os.startfile(path)
-
-        else:
-
-            subprocess.Popen(
-                ["xdg-open", path]
-            )
-
-    except Exception as e:
-
-        messagebox.showerror(
-            "Error",
-            str(e)
-        )
+    status_label.config(text=f"Done. Features: {total}")
