@@ -1,85 +1,61 @@
 def start_camera():
-    global cap, running, use_oak, oak_device, oak_queue
+    global cap, running, use_oak, oak_pipeline, oak_queue
 
     if running:
         return
 
-    available = []
-
-    # ---------------- USB CAMERAS ----------------
-    for i in range(10):
-        test = cv2.VideoCapture(i)
-        if test.isOpened():
-            available.append(("USB", f"USB-{i}", i))
-        test.release()
-
-    # ---------------- OAK CAMERAS ----------------
+    # ---------------- OAK FIRST ----------------
     try:
+        import depthai as dai
+
         devices = dai.Device.getAllAvailableDevices()
-        for idx, dev in enumerate(devices):
-            name = getattr(dev, "name", f"OAK-{idx+1}")
-            available.append(("OAK", name, dev))
-    except Exception as e:
-        print("OAK scan error:", e)
 
-    if len(available) == 0:
-        messagebox.showerror("Error", "No cameras found")
-        return
+        if len(devices) > 0:
+            use_oak = True
 
-    # ---------------- MENU ----------------
-    menu_text = "Select camera:\n\n"
-    for i, cam in enumerate(available):
-        menu_text += f"{i}: {cam[1]}\n"
+            pipeline = dai.Pipeline()
 
-    choice = simpledialog.askinteger(
-        "Camera Select",
-        menu_text,
-        minvalue=0,
-        maxvalue=len(available) - 1
-    )
+            cam = pipeline.create(dai.node.ColorCamera)
 
-    if choice is None:
-        return
+            # 🔥 HIGH RES FOR AI (4K-ish)
+            cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
 
-    cam_type, cam_name, cam_id = available[choice]
+            cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
+            cam.setInterleaved(False)
 
-    # ---------------- OAK START ----------------
-    if cam_type == "OAK":
-        use_oak = True
+            xout = pipeline.create(dai.node.XLinkOut)
+            xout.setStreamName("video")
 
-        pipeline = dai.Pipeline()
+            cam.video.link(xout.input)
 
-        cam_rgb = pipeline.create(dai.node.ColorCamera)
-        cam_rgb.setPreviewSize(640, 480)
-        cam_rgb.setInterleaved(False)
-        cam_rgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
+            oak_pipeline = dai.Device(pipeline)
 
-        xout = pipeline.create(dai.node.XLinkOut)
-        xout.setStreamName("video")
+            oak_queue = oak_pipeline.getOutputQueue(
+                name="video",
+                maxSize=2,
+                blocking=False
+            )
 
-        cam_rgb.preview.link(xout.input)
+            cap = None
+            status_label.config(text="OAK Camera (4K) started")
 
-        oak_device = dai.Device(pipeline)
-        oak_queue = oak_device.getOutputQueue(
-            name="video",
-            maxSize=4,
-            blocking=False
-        )
-
-        cap = None
-        status_label.config(text=f"{cam_name} started")
-
-    # ---------------- USB START ----------------
-    else:
-        use_oak = False
-
-        cap = cv2.VideoCapture(cam_id)
-
-        if not cap.isOpened():
-            messagebox.showerror("Error", "Failed to open USB camera")
+            running = True
+            update_frame()
             return
 
-        status_label.config(text=f"{cam_name} started")
+    except Exception as e:
+        print("OAK failed, fallback USB:", e)
+
+    # ---------------- USB FALLBACK ----------------
+    use_oak = False
+
+    cap = cv2.VideoCapture(0)
+
+    if not cap.isOpened():
+        messagebox.showerror("Error", "No camera found")
+        return
+
+    status_label.config(text="USB Camera started")
 
     running = True
-    root.after(10, update_frame)
+    update_frame()
