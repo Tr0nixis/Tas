@@ -1,45 +1,41 @@
-def update_frame():
-    global running, cap, use_oak, oak_queue
+def select_camera():
+    global selected_camera
 
-    if not running:
+    available = []
+
+    # USB cameras
+    for i in range(10):
+        test = cv2.VideoCapture(i)
+        if test.isOpened():
+            available.append(("USB", i))
+        test.release()
+
+    # OAK cameras
+    try:
+        import depthai as dai
+        devices = dai.Device.getAllAvailableDevices()
+
+        for idx, d in enumerate(devices):
+            available.append(("OAK", idx))
+    except:
+        pass
+
+    if not available:
+        messagebox.showerror("Error", "No cameras found")
         return
 
-    # ---------------- GET FRAME ----------------
-    if use_oak:
-        frame = oak_queue.get().getCvFrame()
-    else:
-        ret, frame = cap.read()
-        if not ret:
-            root.after(10, update_frame)
-            return
+    text = "\n".join([f"{i}: {cam[0]}-{cam[1]}" for i, cam in enumerate(available)])
 
-    # ---------------- AI FULL RES ----------------
-    ai_frame = frame.copy()
+    choice = simpledialog.askinteger(
+        "Select Camera",
+        f"Available cameras:\n\n{text}\n\nEnter number:",
+        minvalue=0,
+        maxvalue=len(available) - 1
+    )
 
-    # ---------------- UI (DOWNSCALE ONLY) ----------------
-    display = cv2.resize(frame, (UI_SIZE, UI_SIZE))
+    if choice is None:
+        return
 
-    # ---------------- AI LOGIC (USES FULL RES) ----------------
-    result = anomaly_predict(ai_frame)
+    selected_camera = available[choice]
 
-    if result:
-        label, color, conf = result
-        cv2.putText(
-            display,
-            f"{label} {conf:.2f}",
-            (10, 30),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.6,
-            color,
-            2
-        )
-
-    # ---------------- SHOW ----------------
-    rgb = cv2.cvtColor(display, cv2.COLOR_BGR2RGB)
-    img = Image.fromarray(rgb)
-    imgtk = ImageTk.PhotoImage(img)
-
-    video_label.imgtk = imgtk
-    video_label.configure(image=imgtk)
-
-    root.after(10, update_frame)
+    status_label.config(text=f"Selected: {selected_camera[0]}-{selected_camera[1]}")
