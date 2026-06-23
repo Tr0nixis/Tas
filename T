@@ -1,7 +1,23 @@
-if use_oak:
-    frame = oak_queue.get().getCvFrame()
-else:
-    ret, frame = cap.read()
-    if not ret:
-        root.after(10, update_frame)
-        return
+if camera_index == -1:
+    # ---------------- OAK CAMERA ----------------
+    import depthai as dai
+
+    global oak_pipeline, oak_full_queue, oak_preview_queue, use_oak
+
+    use_oak = True
+
+    oak_pipeline = dai.Pipeline()
+    cam = oak_pipeline.create(dai.node.Camera).build()
+
+    full_res = cam.requestOutput((4056, 3040), type=dai.ImgFrame.Type.BGR888i)
+    preview  = cam.requestOutput((1280, 960), type=dai.ImgFrame.Type.BGR888i)
+
+    oak_full_queue = full_res.createOutputQueue(maxSize=2, blocking=False)
+    oak_preview_queue = preview.createOutputQueue(maxSize=4, blocking=False)
+
+    oak_pipeline.start()
+
+    status_label.config(text="OAK camera started")
+    running = True
+    update_frame()
+    return
