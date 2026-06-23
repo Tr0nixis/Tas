@@ -1,13 +1,2 @@
-ret, frame = cap.read()
-
-if not ret:
-    root.after(10, update_frame)
-    return
-
-frame = cv2.flip(frame, 1)
-
-# FULL camera frame for AI
-ai_frame = frame.copy()
-
-# UI preview (300x300)
-display = cv2.resize(frame, (300, 300))
+patches = extract_features(ai_frame)
+heatmap = build_heatmap(ai_frame, patches, anomaly_memory)
