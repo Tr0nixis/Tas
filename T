@@ -1,45 +1,8 @@
-def start_camera():
-    global cap, running, selected_camera
-
-    if running:
+if isinstance(cap, tuple):  
+    device, queue = cap
+    frame = queue.get().getCvFrame()
+else:
+    ret, frame = cap.read()
+    if not ret:
+        root.after(10, update_frame)
         return
-
-    if selected_camera is None:
-        messagebox.showwarning("Warning", "Select a camera first")
-        return
-
-    cam_type, cam_id = selected_camera
-
-    # ---------------- OAK ----------------
-    if cam_type == "OAK":
-        import depthai as dai
-
-        pipeline = dai.Pipeline()
-
-        cam = pipeline.create(dai.node.ColorCamera)
-
-        cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
-        cam.setInterleaved(False)
-
-        xout = pipeline.create(dai.node.XLinkOut)
-        xout.setStreamName("video")
-
-        cam.video.link(xout.input)
-
-        device = dai.Device(pipeline)
-        queue = device.getOutputQueue("video", maxSize=2, blocking=False)
-
-        cap = (device, queue)   # store tuple
-
-    # ---------------- USB ----------------
-    else:
-        cap = cv2.VideoCapture(cam_id)
-
-        if not cap.isOpened():
-            messagebox.showerror("Error", "Failed to open camera")
-            return
-
-    running = True
-    status_label.config(text=f"Camera started: {cam_type}-{cam_id}")
-
-    update_frame()
