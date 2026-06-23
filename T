@@ -1,19 +1,16 @@
-def update_frame():
-    global running
+try:
+    import depthai as dai
 
-    if not running or cap is None:
-        return
+    try:
+        devices = dai.Device.getAllAvailableDevices()
 
-    ret, frame = cap.read()
+        if len(devices) > 0:
+            cams.append(("OAK", 0))
+        else:
+            print("No OAK devices found")
 
-    if not ret:
-        root.after(10, update_frame)
-        return
+    except Exception as e:
+        print("OAK detection failed:", e)
 
-    frame = cv2.flip(frame, 1)
-
-    # FULL camera frame for AI
-    ai_frame = frame.copy()
-
-    # UI preview (300x300)
-    display = cv2.resize(frame, (300, 300))
+except ImportError:
+    pass
