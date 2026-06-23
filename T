@@ -1,4 +1,13 @@
-cap = cv2.VideoCapture(camera_index)
+ret, frame = cap.read()
 
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 4056)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 3040)
+if not ret:
+    root.after(10, update_frame)
+    return
+
+frame = cv2.flip(frame, 1)
+
+# FULL camera frame for AI
+ai_frame = frame.copy()
+
+# UI preview (300x300)
+display = cv2.resize(frame, (300, 300))
