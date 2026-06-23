@@ -1,86 +1,79 @@
-def start_camera():
-    global cap, running, use_oak, oak_device, oak_queue
+def update_frame():
+    global running, cap, use_oak, oak_queue
 
-    if running:
+    if not running:
         return
 
-    available = []
-
-    # ---------------- USB DETECTION ----------------
-    for i in range(10):
-        test = cv2.VideoCapture(i)
-        if test.isOpened():
-            available.append(("USB", i))
-        test.release()
-
-    # ---------------- OAK DETECTION ----------------
-    try:
-        import depthai as dai
-        devices = dai.Device.getAllAvailableDevices()
-
-        for idx, d in enumerate(devices):
-            available.append(("OAK", idx))
-    except:
-        pass
-
-    if not available:
-        messagebox.showerror("Error", "No cameras found")
-        return
-
-    menu_text = "\n".join([f"{i}: {cam[0]}-{cam[1]}" for i, cam in enumerate(available)])
-
-    choice = simpledialog.askinteger(
-        "Select Camera",
-        f"Available cameras:\n\n{menu_text}",
-        minvalue=0,
-        maxvalue=len(available) - 1
-    )
-
-    if choice is None:
-        return
-
-    cam_type, cam_id = available[choice]
-
-    # ================= OAK =================
-    if cam_type == "OAK":
-        import depthai as dai
-
-        use_oak = True
-
-        pipeline = dai.Pipeline()
-
-        cam = pipeline.create(dai.node.ColorCamera)
-        cam.setPreviewSize(1280, 720)
-        cam.setInterleaved(False)
-        cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
-
-        xout = pipeline.create(dai.node.XLinkOut)
-        xout.setStreamName("video")
-
-        cam.preview.link(xout.input)
-
-        oak_device = dai.Device(pipeline)
-
-        oak_queue = oak_device.getOutputQueue(
-            name="video",
-            maxSize=4,
-            blocking=False
-        )
-
-        cap = "OAK"
-
-        status_label.config(text="OAK camera started")
-
-    # ================= USB =================
-    else:
-        use_oak = False
-        cap = cv2.VideoCapture(cam_id)
-
-        if not cap.isOpened():
-            messagebox.showerror("Error", f"Failed to open USB camera {cam_id}")
+    # ================= GET FRAME =================
+    if use_oak:
+        if oak_queue is None:
+            root.after(10, update_frame)
             return
 
-        status_label.config(text=f"USB camera {cam_id} started")
+        frame = oak_queue.get().getCvFrame()
 
-    running = True
-    update_frame()
+    else:
+        if cap is None:
+            return
+
+        ret, frame = cap.read()
+        if not ret:
+            root.after(10, update_frame)
+            return
+
+    # ================= PROCESS FRAME =================
+    frame = cv2.flip(frame, 1)
+
+    display = cv2.resize(frame, (300, 300))
+
+    ai_frame = frame  # full resolution for AI
+
+    # ================= ANOMALY PREDICT =================
+    result = anomaly_predict(frame)
+
+    if result:
+        label, color, conf = result
+
+        cv2.putText(
+            display,
+            f"{label} {conf:.2f}",
+            (10, 30),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.8,
+            color,
+            2
+        )
+
+    # ================= ROI =================
+    if bbox is not None:
+        x1, y1, x2, y2 = bbox
+
+        cv2.rectangle(display, (x1, y1), (x2, y2), (255, 255, 0), 2)
+
+        roi = frame[y1:y2, x1:x2]
+
+        if roi.size > 0:
+            result = anomaly_predict(roi)
+
+            if result:
+                label, color, conf = result
+
+                cv2.putText(
+                    display,
+                    f"{label} {conf:.2f}",
+                    (x1, y1 - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    color,
+                    2
+                )
+
+    # ================= SHOW =================
+    rgb = cv2.cvtColor(display, cv2.COLOR_BGR2RGB)
+    img = Image.fromarray(rgb)
+    imgtk = ImageTk.PhotoImage(img)
+
+    video_label.imgtk = imgtk
+    video_label.configure(image=imgtk)
+
+    root.after(10, update_frame)
