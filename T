@@ -1,10 +1,7 @@
-if camera_index == -1:
-    # ---------------- OAK CAMERA ----------------
+if use_oak:
     import depthai as dai
 
-    global oak_pipeline, oak_full_queue, oak_preview_queue, use_oak
-
-    use_oak = True
+    global oak_pipeline, oak_full_queue, oak_preview_queue
 
     oak_pipeline = dai.Pipeline()
     cam = oak_pipeline.create(dai.node.Camera).build()
@@ -17,7 +14,7 @@ if camera_index == -1:
 
     oak_pipeline.start()
 
-    status_label.config(text="OAK camera started")
     running = True
+    status_label.config(text="OAK camera started")
     update_frame()
     return
