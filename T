@@ -1,37 +1,35 @@
-def start_camera():
-    global cap, running
+def build_heatmap(frame, patches, anomaly_memory):
 
-    if running:
-        return
+    if len(anomaly_memory) == 0:
+        return None
 
-    available_cameras = []
+    h, w, _ = frame.shape
 
-    for i in range(10):
-        test = cv2.VideoCapture(i)
-        if test.isOpened():
-            available_cameras.append(i)
-        test.release()
+    if len(patches) == 0:
+        return None
 
-    if not available_cameras:
-        messagebox.showerror("Error", "No cameras found")
-        return
+    scores = []
 
-    camera_index = simpledialog.askinteger(
-        "Select Camera",
-        f"Available cameras:\n{available_cameras}\n\nEnter camera number:",
-        initialvalue=available_cameras[0]
-    )
+    for p in patches:
+        sim = cosine_similarity([p], anomaly_memory)[0]
+        scores.append(1.0 - np.max(sim))
 
-    if camera_index is None:
-        return
+    if len(scores) < 4:
+        return None  # not enough data for grid
 
-    cap = cv2.VideoCapture(camera_index)
+    side = int(np.sqrt(len(scores)))
 
-    if not cap.isOpened():
-        messagebox.showerror("Error", f"Failed to open camera {camera_index}")
-        return
+    if side < 2:
+        return None
 
-    running = True
+    usable = side * side
+    scores = scores[:usable]
 
-    status_label.config(text=f"Camera {camera_index} started")
-    update_frame()
+    heat = np.array(scores).reshape(side, side)
+
+    heat = cv2.resize(heat, (w, h))
+
+    heat = heat / (heat.max() + 1e-6)
+    heat = (heat * 255).astype(np.uint8)
+
+    return cv2.applyColorMap(heat, cv2.COLORMAP_JET)
