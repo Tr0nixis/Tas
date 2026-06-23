@@ -1,46 +1,4 @@
-def train_anomaly_memory():
+cap = cv2.VideoCapture(camera_index)
 
-    global anomaly_memory
-
-    name = simpledialog.askstring("Memory Name", "Enter memory name")
-    if not name:
-        return
-
-    files = os.listdir(VALID_DIR)
-
-    if len(files) < 10:
-        messagebox.showwarning("Warning", "Need at least 10 images")
-        return
-
-    anomaly_memory.clear()
-
-    status_label.config(text="Training memory...")
-    root.update()
-
-    total = 0
-
-    for i, f in enumerate(files):
-
-        path = os.path.join(VALID_DIR, f)
-        img = cv2.imread(path)
-
-        if img is None:
-            continue
-
-        # 🔥 DEBUG (so you SEE progress)
-        status_label.config(text=f"Training {i+1}/{len(files)}")
-        root.update()
-
-        feats = extract_features(img)
-
-        anomaly_memory.extend(feats)
-        total += len(feats)
-
-    np.save(
-        os.path.join(MEMORY_DIR, f"{name}.npy"),
-        np.array(anomaly_memory)
-    )
-
-    refresh_memory_list()
-
-    status_label.config(text=f"Done. Features: {total}")
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 4056)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 3040)
