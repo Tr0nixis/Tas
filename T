@@ -1,20 +1,89 @@
-btn(
-    "Open Scans Folder",
-    open_scans_folder,
-    4,
-    1
-)
+# =========================================================
+# SAVED ROI / CROP CONFIG
+# =========================================================
 
-btn(
-    "Reset ROI",
-    reset_crop,
-    5,
-    0
-)
+CROP_FILE = Path("crop_config.json")
 
-btn(
-    "Quit",
-    on_close,
-    5,
-    1
-)
+def load_crop():
+
+    global bbox
+
+    if CROP_FILE.exists():
+
+        try:
+
+            with open(CROP_FILE, "r") as f:
+
+                data = json.load(f)
+
+            bbox = (
+                data["x1"],
+                data["y1"],
+                data["x2"],
+                data["y2"]
+            )
+
+            print("Crop loaded")
+
+        except Exception as e:
+
+            print("Failed loading crop:", e)
+
+def save_crop():
+
+    global bbox
+
+    if bbox is None:
+        return
+
+    with open(CROP_FILE, "w") as f:
+
+        json.dump(
+            {
+                "x1": bbox[0],
+                "y1": bbox[1],
+                "x2": bbox[2],
+                "y2": bbox[3]
+            },
+            f
+        )
+
+def reset_crop():
+
+    global bbox
+
+    bbox = None
+
+    if CROP_FILE.exists():
+        CROP_FILE.unlink()
+
+    status_label.config(
+        text="ROI reset"
+    )
+
+# =========================================================
+# OPEN SCANS FOLDER
+# =========================================================
+
+def open_scans_folder():
+
+    try:
+
+        path = os.path.abspath(SCAN_DIR)
+
+        if os.name == "nt":
+
+            os.startfile(path)
+
+        else:
+
+            subprocess.Popen(
+                ["xdg-open", path]
+            )
+
+    except Exception as e:
+
+        messagebox.showerror(
+            "Error",
+            str(e)
+        )
