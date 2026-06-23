@@ -1,8 +1,27 @@
-if isinstance(cap, tuple):  
-    device, queue = cap
-    frame = queue.get().getCvFrame()
-else:
-    ret, frame = cap.read()
-    if not ret:
-        root.after(10, update_frame)
+def update_frame():
+    global running, cap, use_oak
+
+    if not running:
         return
+
+    # ================= GET FRAME =================
+    if cap is None:
+        return
+
+    if isinstance(cap, tuple):
+        # OAK CAMERA
+        device, queue = cap
+        frame = queue.get().getCvFrame()
+    else:
+        # USB CAMERA
+        ret, frame = cap.read()
+        if not ret:
+            root.after(10, update_frame)
+            return
+
+    # ================= CONTINUE NORMAL PIPE =================
+    frame = cv2.flip(frame, 1)
+
+    ai_frame = frame.copy()
+
+    display = cv2.resize(frame, (300, 300))
