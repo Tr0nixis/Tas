@@ -1,41 +1,45 @@
-def select_camera():
-    global selected_camera
+def start_camera():
+    global cap, running, selected_camera
 
-    available = []
+    if running:
+        return
 
-    # USB cameras
-    for i in range(10):
-        test = cv2.VideoCapture(i)
-        if test.isOpened():
-            available.append(("USB", i))
-        test.release()
+    if selected_camera is None:
+        messagebox.showwarning("Warning", "Select a camera first")
+        return
 
-    # OAK cameras
-    try:
+    cam_type, cam_id = selected_camera
+
+    # ---------------- OAK ----------------
+    if cam_type == "OAK":
         import depthai as dai
-        devices = dai.Device.getAllAvailableDevices()
 
-        for idx, d in enumerate(devices):
-            available.append(("OAK", idx))
-    except:
-        pass
+        pipeline = dai.Pipeline()
 
-    if not available:
-        messagebox.showerror("Error", "No cameras found")
-        return
+        cam = pipeline.create(dai.node.ColorCamera)
 
-    text = "\n".join([f"{i}: {cam[0]}-{cam[1]}" for i, cam in enumerate(available)])
+        cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
+        cam.setInterleaved(False)
 
-    choice = simpledialog.askinteger(
-        "Select Camera",
-        f"Available cameras:\n\n{text}\n\nEnter number:",
-        minvalue=0,
-        maxvalue=len(available) - 1
-    )
+        xout = pipeline.create(dai.node.XLinkOut)
+        xout.setStreamName("video")
 
-    if choice is None:
-        return
+        cam.video.link(xout.input)
 
-    selected_camera = available[choice]
+        device = dai.Device(pipeline)
+        queue = device.getOutputQueue("video", maxSize=2, blocking=False)
 
-    status_label.config(text=f"Selected: {selected_camera[0]}-{selected_camera[1]}")
+        cap = (device, queue)   # store tuple
+
+    # ---------------- USB ----------------
+    else:
+        cap = cv2.VideoCapture(cam_id)
+
+        if not cap.isOpened():
+            messagebox.showerror("Error", "Failed to open camera")
+            return
+
+    running = True
+    status_label.config(text=f"Camera started: {cam_type}-{cam_id}")
+
+    update_frame()
