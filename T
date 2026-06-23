@@ -8,46 +8,55 @@ def start_camera():
 
     available = []
 
-    # -------------------------
-    # USB cameras
-    # -------------------------
+    # =====================================================
+    # USB CAMERA DETECTION
+    # =====================================================
     for i in range(10):
         test = cv2.VideoCapture(i)
         if test.isOpened():
-            available.append(("USB", i))
+            available.append(("USB", f"USB-{i}", i))
         test.release()
 
-    # -------------------------
-    # OAK cameras
-    # -------------------------
-    oak_devices = []
+    # =====================================================
+    # OAK CAMERA DETECTION (REAL)
+    # =====================================================
     try:
         import depthai as dai
-        oak_devices = dai.Device.getAllAvailableDevices()
-    except Exception as e:
-        oak_devices = []
 
-    if len(oak_devices) > 0:
-        available.append(("OAK", 0))
+        devices = dai.Device.getAllAvailableDevices()
+
+        for idx, dev in enumerate(devices):
+            name = getattr(dev, "name", f"OAK-{idx+1}")
+            available.append(("OAK", name, dev))
+
+    except Exception:
+        pass
 
     if not available:
         messagebox.showerror("Error", "No cameras found")
         return
 
+    # =====================================================
+    # USER SELECTION MENU
+    # =====================================================
+    menu_text = "Available cameras:\n\n"
+    for i, cam in enumerate(available):
+        menu_text += f"{i}: {cam[1]}\n"
+
     choice = simpledialog.askinteger(
         "Select Camera",
-        f"Available:\n{available}\n\nEnter index (0-{len(available)-1}):",
+        menu_text,
         minvalue=0,
-        maxvalue=len(available)-1
+        maxvalue=len(available) - 1
     )
 
     if choice is None:
         return
 
-    cam_type, cam_id = available[choice]
+    cam_type, cam_name, cam_data = available[choice]
 
     # =====================================================
-    # OAK START (FIXED)
+    # OAK START
     # =====================================================
     if cam_type == "OAK":
         import depthai as dai
@@ -66,26 +75,31 @@ def start_camera():
 
         cam_rgb.preview.link(xout.input)
 
-        device = dai.Device(pipeline)
-        oak_queue = device.getOutputQueue("video", maxSize=4, blocking=False)
+        device = dai.Device(pipeline, cam_data)
+
+        oak_queue = device.getOutputQueue(
+            name="video",
+            maxSize=4,
+            blocking=False
+        )
 
         cap = None
 
-        status_label.config(text="OAK camera started")
+        status_label.config(text=f"{cam_name} started")
 
     # =====================================================
-    # USB START (FIXED)
+    # USB START
     # =====================================================
     else:
         use_oak = False
 
-        cap = cv2.VideoCapture(cam_id)
+        cap = cv2.VideoCapture(cam_data)
 
         if not cap.isOpened():
             messagebox.showerror("Error", "Failed to open USB camera")
             return
 
-        status_label.config(text=f"USB camera {cam_id} started")
+        status_label.config(text=f"{cam_name} started")
 
     running = True
     update_frame()
