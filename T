@@ -4,7 +4,7 @@ def update_frame():
     if not running:
         return
 
-    # ---------------- GET FRAME ----------------
+    # ---------------- FRAME ----------------
     if use_oak:
         if oak_queue is None:
             root.after(10, update_frame)
@@ -13,7 +13,6 @@ def update_frame():
     else:
         if cap is None:
             return
-
         ret, frame = cap.read()
         if not ret:
             root.after(10, update_frame)
