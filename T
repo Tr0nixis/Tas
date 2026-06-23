@@ -1,2 +1,8 @@
-patches = extract_features(ai_frame)
-heatmap = build_heatmap(ai_frame, patches, anomaly_memory)
+ret, frame = cap.read()
+
+if not ret:
+    return
+
+frame = cv2.flip(frame, 1)
+
+ai_frame = frame.copy()
