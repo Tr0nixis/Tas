@@ -1,61 +1,45 @@
-def start_camera():
-    global cap, running, use_oak, oak_pipeline, oak_queue
+def update_frame():
+    global running, cap, use_oak, oak_queue
 
-    if running:
+    if not running:
         return
 
-    # ---------------- OAK FIRST ----------------
-    try:
-        import depthai as dai
-
-        devices = dai.Device.getAllAvailableDevices()
-
-        if len(devices) > 0:
-            use_oak = True
-
-            pipeline = dai.Pipeline()
-
-            cam = pipeline.create(dai.node.ColorCamera)
-
-            # 🔥 HIGH RES FOR AI (4K-ish)
-            cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
-
-            cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
-            cam.setInterleaved(False)
-
-            xout = pipeline.create(dai.node.XLinkOut)
-            xout.setStreamName("video")
-
-            cam.video.link(xout.input)
-
-            oak_pipeline = dai.Device(pipeline)
-
-            oak_queue = oak_pipeline.getOutputQueue(
-                name="video",
-                maxSize=2,
-                blocking=False
-            )
-
-            cap = None
-            status_label.config(text="OAK Camera (4K) started")
-
-            running = True
-            update_frame()
+    # ---------------- GET FRAME ----------------
+    if use_oak:
+        frame = oak_queue.get().getCvFrame()
+    else:
+        ret, frame = cap.read()
+        if not ret:
+            root.after(10, update_frame)
             return
 
-    except Exception as e:
-        print("OAK failed, fallback USB:", e)
+    # ---------------- AI FULL RES ----------------
+    ai_frame = frame.copy()
 
-    # ---------------- USB FALLBACK ----------------
-    use_oak = False
+    # ---------------- UI (DOWNSCALE ONLY) ----------------
+    display = cv2.resize(frame, (UI_SIZE, UI_SIZE))
 
-    cap = cv2.VideoCapture(0)
+    # ---------------- AI LOGIC (USES FULL RES) ----------------
+    result = anomaly_predict(ai_frame)
 
-    if not cap.isOpened():
-        messagebox.showerror("Error", "No camera found")
-        return
+    if result:
+        label, color, conf = result
+        cv2.putText(
+            display,
+            f"{label} {conf:.2f}",
+            (10, 30),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            color,
+            2
+        )
 
-    status_label.config(text="USB Camera started")
+    # ---------------- SHOW ----------------
+    rgb = cv2.cvtColor(display, cv2.COLOR_BGR2RGB)
+    img = Image.fromarray(rgb)
+    imgtk = ImageTk.PhotoImage(img)
 
-    running = True
-    update_frame()
+    video_label.imgtk = imgtk
+    video_label.configure(image=imgtk)
+
+    root.after(10, update_frame)
