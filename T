@@ -1,35 +1,19 @@
-def build_heatmap(frame, patches, anomaly_memory):
+def update_frame():
+    global running
 
-    if len(anomaly_memory) == 0:
-        return None
+    if not running or cap is None:
+        return
 
-    h, w, _ = frame.shape
+    ret, frame = cap.read()
 
-    if len(patches) == 0:
-        return None
+    if not ret:
+        root.after(10, update_frame)
+        return
 
-    scores = []
+    frame = cv2.flip(frame, 1)
 
-    for p in patches:
-        sim = cosine_similarity([p], anomaly_memory)[0]
-        scores.append(1.0 - np.max(sim))
+    # FULL camera frame for AI
+    ai_frame = frame.copy()
 
-    if len(scores) < 4:
-        return None  # not enough data for grid
-
-    side = int(np.sqrt(len(scores)))
-
-    if side < 2:
-        return None
-
-    usable = side * side
-    scores = scores[:usable]
-
-    heat = np.array(scores).reshape(side, side)
-
-    heat = cv2.resize(heat, (w, h))
-
-    heat = heat / (heat.max() + 1e-6)
-    heat = (heat * 255).astype(np.uint8)
-
-    return cv2.applyColorMap(heat, cv2.COLORMAP_JET)
+    # UI preview (300x300)
+    display = cv2.resize(frame, (300, 300))
