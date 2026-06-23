@@ -1,20 +1,37 @@
-def list_cameras():
-    cams = []
+def start_camera():
+    global cap, running
+
+    if running:
+        return
+
+    available = []
 
     import cv2
     for i in range(10):
         test = cv2.VideoCapture(i)
         if test.isOpened():
-            cams.append(("OpenCV", i))
+            available.append(i)
         test.release()
 
-    try:
-        import depthai as dai
-        devices = dai.Device.getAllAvailableDevices()
+    if not available:
+        messagebox.showerror("Error", "No cameras found")
+        return
 
-        if len(devices) > 0:
-            cams.append(("OAK", 0))
-    except:
-        pass
+    cam = simpledialog.askinteger(
+        "Camera",
+        f"Available: {available}\nPick one:",
+        initialvalue=available[0]
+    )
 
-    return cams
+    if cam is None:
+        return
+
+    cap = cv2.VideoCapture(cam)
+
+    if not cap.isOpened():
+        messagebox.showerror("Error", "Failed to open camera")
+        return
+
+    running = True
+    status_label.config(text=f"Camera {cam} started")
+    update_frame()
