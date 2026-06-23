@@ -1,16 +1,20 @@
-try:
-    import depthai as dai
+def list_cameras():
+    cams = []
+
+    import cv2
+    for i in range(10):
+        test = cv2.VideoCapture(i)
+        if test.isOpened():
+            cams.append(("OpenCV", i))
+        test.release()
 
     try:
+        import depthai as dai
         devices = dai.Device.getAllAvailableDevices()
 
         if len(devices) > 0:
             cams.append(("OAK", 0))
-        else:
-            print("No OAK devices found")
+    except:
+        pass
 
-    except Exception as e:
-        print("OAK detection failed:", e)
-
-except ImportError:
-    pass
+    return cams
