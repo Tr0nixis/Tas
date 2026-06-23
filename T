@@ -1,16 +1,18 @@
 def update_frame():
-    global running, cap, use_oak, ai_frame
+    global running, cap, use_oak, ai_frame, bbox, oak_queue
 
     if not running:
         return
 
     # ---------------- GET FRAME ----------------
     if use_oak:
+        if oak_queue is None:
+            root.after(10, update_frame)
+            return
         frame = oak_queue.get().getCvFrame()
     else:
         if cap is None:
             return
-
         ret, frame = cap.read()
         if not ret:
             root.after(10, update_frame)
@@ -18,44 +20,69 @@ def update_frame():
 
     # ---------------- PREPROCESS ----------------
     frame = cv2.flip(frame, 1)
-
     ai_frame = frame.copy()
 
     display = cv2.resize(frame, (300, 300))
+
+    # ---------------- HEATMAP ----------------
+    try:
+        patches = extract_features(ai_frame)
+        heatmap = build_heatmap(ai_frame, patches, anomaly_memory)
+
+        if heatmap is not None:
+            heatmap_small = cv2.resize(heatmap, (300, 300))
+            display = cv2.addWeighted(display, 0.65, heatmap_small, 0.35, 0)
+    except:
+        pass
 
     # ---------------- ROI ----------------
     if bbox is not None:
         x1, y1, x2, y2 = bbox
 
-        x1, y1 = int(x1), int(y1)
-        x2, y2 = int(x2), int(y2)
+        h, w = ai_frame.shape[:2]
+
+        x1 = int(x1 * w / 300)
+        y1 = int(y1 * h / 300)
+        x2 = int(x2 * w / 300)
+        y2 = int(y2 * h / 300)
+
+        x1, y1 = max(0, x1), max(0, y1)
+        x2, y2 = min(w, x2), min(h, y2)
 
         cv2.rectangle(display, (x1, y1), (x2, y2), (255, 255, 0), 2)
 
-        roi = frame[y1:y2, x1:x2]
+        roi = ai_frame[y1:y2, x1:x2]
 
         if roi.size > 0:
             result = anomaly_predict(roi)
-
             if result:
                 label, color, conf = result
-                cv2.putText(display, f"{label} {conf:.2f}",
-                            (x1, max(20, y1 - 10)),
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            0.6, color, 2)
+                cv2.putText(
+                    display,
+                    f"{label} {conf:.2f}",
+                    (x1, max(20, y1 - 10)),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    color,
+                    2
+                )
+
     else:
         result = anomaly_predict(ai_frame)
-
         if result:
             label, color, conf = result
-            cv2.putText(display, f"{label} {conf:.2f}",
-                        (10, 30),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.7, color, 2)
+            cv2.putText(
+                display,
+                f"{label} {conf:.2f}",
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.9,
+                color,
+                2
+            )
 
-    # ---------------- SHOW ----------------
+    # ---------------- RENDER ----------------
     rgb = cv2.cvtColor(display, cv2.COLOR_BGR2RGB)
-
     img = Image.fromarray(rgb)
     imgtk = ImageTk.PhotoImage(img)
 
