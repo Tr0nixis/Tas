@@ -1,20 +1,23 @@
-if use_oak:
+if cam_type == "OAK":
     import depthai as dai
 
-    global oak_pipeline, oak_full_queue, oak_preview_queue
+    use_oak = True
 
-    oak_pipeline = dai.Pipeline()
-    cam = oak_pipeline.create(dai.node.Camera).build()
+    pipeline = dai.Pipeline()
 
-    full_res = cam.requestOutput((4056, 3040), type=dai.ImgFrame.Type.BGR888i)
-    preview  = cam.requestOutput((1280, 960), type=dai.ImgFrame.Type.BGR888i)
+    cam = pipeline.create(dai.node.ColorCamera)
+    cam.setPreviewSize(640, 480)
+    cam.setInterleaved(False)
+    cam.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
 
-    oak_full_queue = full_res.createOutputQueue(maxSize=2, blocking=False)
-    oak_preview_queue = preview.createOutputQueue(maxSize=4, blocking=False)
+    xout = pipeline.create(dai.node.XLinkOut)
+    xout.setStreamName("video")
 
-    oak_pipeline.start()
+    cam.preview.link(xout.input)
 
-    running = True
+    oak_device = dai.Device(pipeline)
+    oak_queue = oak_device.getOutputQueue("video", maxSize=4, blocking=False)
+
+    cap = None
+
     status_label.config(text="OAK camera started")
-    update_frame()
-    return
