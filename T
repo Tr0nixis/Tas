@@ -1,8 +1,37 @@
-ret, frame = cap.read()
+def start_camera():
+    global cap, running
 
-if not ret:
-    return
+    if running:
+        return
 
-frame = cv2.flip(frame, 1)
+    available_cameras = []
 
-ai_frame = frame.copy()
+    for i in range(10):
+        test = cv2.VideoCapture(i)
+        if test.isOpened():
+            available_cameras.append(i)
+        test.release()
+
+    if not available_cameras:
+        messagebox.showerror("Error", "No cameras found")
+        return
+
+    camera_index = simpledialog.askinteger(
+        "Select Camera",
+        f"Available cameras:\n{available_cameras}\n\nEnter camera number:",
+        initialvalue=available_cameras[0]
+    )
+
+    if camera_index is None:
+        return
+
+    cap = cv2.VideoCapture(camera_index)
+
+    if not cap.isOpened():
+        messagebox.showerror("Error", f"Failed to open camera {camera_index}")
+        return
+
+    running = True
+
+    status_label.config(text=f"Camera {camera_index} started")
+    update_frame()
