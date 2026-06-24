@@ -1,31 +1,175 @@
 # =========================================================
-# CLEAR TRAINING FOLDER
+# OFFLINE IMAGE SCAN
 # =========================================================
 
-def clear_valid_folder():
+def scan_image_file():
 
-    count = 0
+    from tkinter import filedialog
 
-    for file in os.listdir(VALID_DIR):
-
-        try:
-            os.remove(
-                os.path.join(
-                    VALID_DIR,
-                    file
-                )
-            )
-            count += 1
-
-        except:
-            pass
-
-    status_label.config(
-        text=f"Deleted {count} training images"
+    file_path = filedialog.askopenfilename(
+        title="Select Image",
+        filetypes=[
+            ("Images", "*.jpg *.jpeg *.png *.bmp")
+        ]
     )
 
-# =========================================================
-# DATABASE SYSTEM
-# =========================================================
+    if not file_path:
+        return
 
-def create_database():
+    frame = cv2.imread(file_path)
+
+    if frame is None:
+        messagebox.showerror(
+            "Error",
+            "Failed loading image"
+        )
+        return
+
+    original = frame.copy()
+
+    # ROI
+    if bbox is not None:
+
+        x1, y1, x2, y2 = bbox
+
+        roi = frame[y1:y2, x1:x2]
+
+        if roi.size > 0:
+            frame = roi
+
+    annotated = frame.copy()
+
+    # -----------------------------------
+    # AI RESULT
+    # -----------------------------------
+
+    result = anomaly_predict(frame)
+
+    if result:
+
+        label, color, conf = result
+
+        cv2.putText(
+            annotated,
+            f"{label} {conf:.2f}",
+            (10, 35),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            color,
+            2
+        )
+
+    # -----------------------------------
+    # HEATMAP
+    # -----------------------------------
+
+    try:
+
+        patches = extract_features(frame)
+
+        heatmap = build_heatmap(
+            frame,
+            patches,
+            anomaly_memory
+        )
+
+        if heatmap is not None:
+
+            annotated = cv2.addWeighted(
+                annotated,
+                0.65,
+                heatmap,
+                0.35,
+                0
+            )
+
+    except:
+        pass
+
+    # -----------------------------------
+    # DEFECT BOXES
+    # -----------------------------------
+
+    gray = cv2.cvtColor(
+        frame,
+        cv2.COLOR_BGR2GRAY
+    )
+
+    blur = cv2.GaussianBlur(
+        gray,
+        (31, 31),
+        0
+    )
+
+    diff = cv2.absdiff(
+        gray,
+        blur
+    )
+
+    diff = cv2.normalize(
+        diff,
+        None,
+        0,
+        255,
+        cv2.NORM_MINMAX
+    )
+
+    _, thresh = cv2.threshold(
+        diff,
+        40,
+        255,
+        cv2.THRESH_BINARY
+    )
+
+    contours, _ = cv2.findContours(
+        thresh,
+        cv2.RETR_EXTERNAL,
+        cv2.CHAIN_APPROX_SIMPLE
+    )
+
+    for cnt in contours:
+
+        area = cv2.contourArea(cnt)
+
+        if area < 150:
+            continue
+
+        x, y, w, h = cv2.boundingRect(cnt)
+
+        cv2.rectangle(
+            annotated,
+            (x, y),
+            (x + w, y + h),
+            (0, 0, 255),
+            2
+        )
+
+    # -----------------------------------
+    # SAVE RESULT
+    # -----------------------------------
+
+    output_name = (
+        os.path.splitext(
+            os.path.basename(file_path)
+        )[0]
+        + "_scan.jpg"
+    )
+
+    save_path = os.path.join(
+        SCAN_DIR,
+        output_name
+    )
+
+    cv2.imwrite(
+        save_path,
+        annotated
+    )
+
+    status_label.config(
+        text=f"Saved scan: {output_name}"
+    )
+
+    messagebox.showinfo(
+        "Finished",
+        f"Saved:\n{save_path}"
+    )
