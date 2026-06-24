@@ -1,1 +1,1 @@
-rgb = cv2.cvtColor(frame_small, cv2.COLOR_BGR2RGB)
+canvas = tk.Canvas(win, width=preview_w, height=preview_h)
