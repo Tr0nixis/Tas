@@ -1,6 +1,6 @@
-rgb = cv2.cvtColor(display, cv2.COLOR_BGR2RGB)
+diff = cv2.absdiff(gray, blur)
 
-rgb = cv2.resize(rgb, (300, 300))  # UI preview shrink
+# noise reduction
+diff = cv2.GaussianBlur(diff, (7, 7), 0)
 
-img = Image.fromarray(rgb)
-imgtk = ImageTk.PhotoImage(img)
+_, thresh = cv2.threshold(diff, 25, 255, cv2.THRESH_BINARY)
