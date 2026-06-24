@@ -1,43 +1,6 @@
-def scan_image_once():
-    global cap
+rgb = cv2.cvtColor(display, cv2.COLOR_BGR2RGB)
 
-    if cap is None and not use_oak:
-        messagebox.showwarning("Warning", "Start camera first")
-        return
+rgb = cv2.resize(rgb, (300, 300))  # UI preview shrink
 
-    if use_oak:
-        frame = oak_queue.get().getCvFrame()
-    else:
-        ret, frame = cap.read()
-        if not ret:
-            return
-
-    frame = cv2.flip(frame, 1)
-
-    # ROI crop if needed
-    if bbox is not None:
-        x1, y1, x2, y2 = bbox
-        frame = frame[y1:y2, x1:x2]
-
-    result = anomaly_predict(frame)
-
-    annotated = frame.copy()
-
-    if result:
-        label, color, conf = result
-
-        cv2.putText(
-            annotated,
-            f"{label} {conf:.2f}",
-            (10, 35),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            color,
-            2
-        )
-
-    filename = os.path.join(SCAN_DIR, f"blind_scan_{scan_count}.jpg")
-
-    cv2.imwrite(filename, annotated)
-
-    status_label.config(text=f"Blind scan saved")
+img = Image.fromarray(rgb)
+imgtk = ImageTk.PhotoImage(img)
