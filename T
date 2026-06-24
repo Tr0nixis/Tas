@@ -1,6 +1,7 @@
-diff = cv2.absdiff(gray, blur)
+frame = cv2.flip(frame, 1)
 
-# noise reduction
-diff = cv2.GaussianBlur(diff, (7, 7), 0)
+# keep AI on full res
+ai_frame = frame.copy()
 
-_, thresh = cv2.threshold(diff, 25, 255, cv2.THRESH_BINARY)
+# UI is small preview
+display = cv2.resize(frame.copy(), (DISPLAY_W, DISPLAY_H))
