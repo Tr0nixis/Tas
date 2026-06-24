@@ -1,8 +1,10 @@
 # =========================================================
-# LOAD DATABASE
+# CLEAR TRAINING FOLDER
 # =========================================================
 
 def clear_valid_folder():
+
+    count = 0
 
     for file in os.listdir(VALID_DIR):
 
@@ -13,12 +15,17 @@ def clear_valid_folder():
                     file
                 )
             )
+            count += 1
+
         except:
             pass
 
     status_label.config(
-        text="Training folder cleared"
+        text=f"Deleted {count} training images"
     )
 
+# =========================================================
+# DATABASE SYSTEM
+# =========================================================
 
-def load_database():
+def create_database():
