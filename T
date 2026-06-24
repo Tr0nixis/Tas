@@ -1,5 +1,7 @@
 def create_feature_extractor():
 
+    print("Loading EfficientNet weights...")
+
     model = models.efficientnet_b0(weights=None)
 
     state_dict = torch.load(
