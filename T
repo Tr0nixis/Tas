@@ -1,20 +1,16 @@
-try:
+patches = extract_features(frame)
 
-    heatmap = build_heatmap(
-        frame,
-        patches,
-        temp_memory
+heatmap = build_heatmap(
+    frame,
+    patches,
+    anomaly_memory
+)
+
+if heatmap is not None:
+    output = cv2.addWeighted(
+        output,
+        0.65,
+        heatmap,
+        0.35,
+        0
     )
-
-    if heatmap is not None:
-
-        output = cv2.addWeighted(
-            output,
-            0.65,
-            heatmap,
-            0.35,
-            0
-        )
-
-except:
-    pass
