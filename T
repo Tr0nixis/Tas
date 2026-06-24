@@ -1,33 +1,22 @@
-# --------------------------------
-# DRAW RESULT
-# --------------------------------
+try:
 
-patches = extract_features(frame)
+    patches = extract_features(frame)
 
-output = frame.copy()
-
-heatmap = build_heatmap(
-    frame,
-    patches,
-    anomaly_memory
-)
-
-if heatmap is not None:
-
-    output = cv2.addWeighted(
-        output,
-        0.65,
-        heatmap,
-        0.35,
-        0
+    heatmap = build_heatmap(
+        frame,
+        patches,
+        anomaly_memory
     )
 
-cv2.putText(
-    output,
-    f"MODEL SCAN: {label} {confidence:.2f}",
-    (10, 35),
-    cv2.FONT_HERSHEY_SIMPLEX,
-    0.8,
-    color,
-    2
-)
+    if heatmap is not None:
+
+        output = cv2.addWeighted(
+            output,
+            0.65,
+            heatmap,
+            0.35,
+            0
+        )
+
+except Exception as e:
+    print("Heatmap error:", e)
