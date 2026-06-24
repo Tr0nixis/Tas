@@ -1,4 +1,10 @@
+# --------------------------------
+# DRAW RESULT
+# --------------------------------
+
 patches = extract_features(frame)
+
+output = frame.copy()
 
 heatmap = build_heatmap(
     frame,
@@ -7,6 +13,7 @@ heatmap = build_heatmap(
 )
 
 if heatmap is not None:
+
     output = cv2.addWeighted(
         output,
         0.65,
@@ -14,3 +21,13 @@ if heatmap is not None:
         0.35,
         0
     )
+
+cv2.putText(
+    output,
+    f"MODEL SCAN: {label} {confidence:.2f}",
+    (10, 35),
+    cv2.FONT_HERSHEY_SIMPLEX,
+    0.8,
+    color,
+    2
+)
