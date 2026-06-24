@@ -1,1 +1,9 @@
-canvas = tk.Canvas(win, width=preview_w, height=preview_h)
+scale_x = frame.shape[1] / preview_w
+scale_y = frame.shape[0] / preview_h
+
+bbox = (
+    int(min(state["x1"], e.x) * scale_x),
+    int(min(state["y1"], e.y) * scale_y),
+    int(max(state["x1"], e.x) * scale_x),
+    int(max(state["y1"], e.y) * scale_y)
+)
