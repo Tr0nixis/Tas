@@ -1,20 +1,24 @@
-def create_feature_extractor():
+# =========================================================
+# LOAD DATABASE
+# =========================================================
 
-    print("Loading EfficientNet weights...")
+def clear_valid_folder():
 
-    model = models.efficientnet_b0(weights=None)
+    for file in os.listdir(VALID_DIR):
 
-    state_dict = torch.load(
-        "weights/efficientnet_b0_rwightman-7f5810bc.pth",
-        map_location=device
+        try:
+            os.remove(
+                os.path.join(
+                    VALID_DIR,
+                    file
+                )
+            )
+        except:
+            pass
+
+    status_label.config(
+        text="Training folder cleared"
     )
 
-    model.load_state_dict(state_dict)
 
-    extractor = nn.Sequential(
-        *list(model.children())[:-2]
-    )
-
-    extractor.eval()
-
-    return extractor.to(device)
+def load_database():
