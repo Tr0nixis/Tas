@@ -1,17 +1,69 @@
-def release(e):
-    global bbox
+def model_blind_scan():
+    global cap, anomaly_memory, scan_count
 
-    x1 = state["x1"]
-    y1 = state["y1"]
+    if cap is None and not use_oak:
+        messagebox.showwarning("Warning", "Start camera first")
+        return
 
-    x2 = e.x
-    y2 = e.y
+    # ---------------- TAKE SNAPSHOT ----------------
+    if use_oak:
+        frame = oak_queue.get().getCvFrame()
+    else:
+        ret, frame = cap.read()
+        if not ret:
+            return
 
-    # clamp safety
-    x1, x2 = sorted([x1, x2])
-    y1, y2 = sorted([y1, y2])
+    frame = cv2.flip(frame, 1)
 
-    bbox = (x1, y1, x2, y2)
+    # ---------------- SELECT MODEL ----------------
+    sel = memory_list.curselection()
 
-    status_label.config(text="ROI set (fixed)")
-    win.destroy()
+    if not sel:
+        messagebox.showwarning("Warning", "Select a model first")
+        return
+
+    model_file = memory_list.get(sel[0])
+
+    # load selected memory temporarily
+    temp_memory = np.load(
+        os.path.join(MEMORY_DIR, model_file),
+        allow_pickle=True
+    ).tolist()
+
+    # ---------------- RUN AI ----------------
+    patches = extract_features(frame)
+
+    scores = []
+    for p in patches:
+        sim = cosine_similarity([p], temp_memory)[0]
+        scores.append(np.max(sim))
+
+    confidence = float(np.mean(scores))
+
+    label = "NORMAL"
+    color = (0, 255, 0)
+
+    if confidence < ANOMALY_THRESHOLD:
+        label = "ANOMALY"
+        color = (0, 0, 255)
+
+    # ---------------- DRAW RESULT ----------------
+    output = frame.copy()
+
+    cv2.putText(
+        output,
+        f"MODEL SCAN: {label} {confidence:.2f}",
+        (10, 35),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.8,
+        color,
+        2
+    )
+
+    # ---------------- SAVE ----------------
+    filename = os.path.join(SCAN_DIR, f"model_scan_{scan_count}.jpg")
+    cv2.imwrite(filename, output)
+
+    scan_count += 1
+
+    status_label.config(text=f"Model scan saved: {filename}")
