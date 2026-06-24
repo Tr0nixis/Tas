@@ -1,69 +1,12 @@
-def model_blind_scan():
-    global cap, anomaly_memory, scan_count
+if AUTO_OPEN_SCAN:
 
-    if cap is None and not use_oak:
-        messagebox.showwarning("Warning", "Start camera first")
-        return
+    try:
 
-    # ---------------- TAKE SNAPSHOT ----------------
-    if use_oak:
-        frame = oak_queue.get().getCvFrame()
-    else:
-        ret, frame = cap.read()
-        if not ret:
-            return
+        if os.name == "nt":
+            os.startfile(filename)
 
-    frame = cv2.flip(frame, 1)
+        else:
+            subprocess.Popen(["xdg-open", filename])
 
-    # ---------------- SELECT MODEL ----------------
-    sel = memory_list.curselection()
-
-    if not sel:
-        messagebox.showwarning("Warning", "Select a model first")
-        return
-
-    model_file = memory_list.get(sel[0])
-
-    # load selected memory temporarily
-    temp_memory = np.load(
-        os.path.join(MEMORY_DIR, model_file),
-        allow_pickle=True
-    ).tolist()
-
-    # ---------------- RUN AI ----------------
-    patches = extract_features(frame)
-
-    scores = []
-    for p in patches:
-        sim = cosine_similarity([p], temp_memory)[0]
-        scores.append(np.max(sim))
-
-    confidence = float(np.mean(scores))
-
-    label = "NORMAL"
-    color = (0, 255, 0)
-
-    if confidence < ANOMALY_THRESHOLD:
-        label = "ANOMALY"
-        color = (0, 0, 255)
-
-    # ---------------- DRAW RESULT ----------------
-    output = frame.copy()
-
-    cv2.putText(
-        output,
-        f"MODEL SCAN: {label} {confidence:.2f}",
-        (10, 35),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.8,
-        color,
-        2
-    )
-
-    # ---------------- SAVE ----------------
-    filename = os.path.join(SCAN_DIR, f"model_scan_{scan_count}.jpg")
-    cv2.imwrite(filename, output)
-
-    scan_count += 1
-
-    status_label.config(text=f"Model scan saved: {filename}")
+    except:
+        pass
