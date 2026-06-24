@@ -1,9 +1,17 @@
-scale_x = frame.shape[1] / preview_w
-scale_y = frame.shape[0] / preview_h
+def release(e):
+    global bbox
 
-bbox = (
-    int(min(state["x1"], e.x) * scale_x),
-    int(min(state["y1"], e.y) * scale_y),
-    int(max(state["x1"], e.x) * scale_x),
-    int(max(state["y1"], e.y) * scale_y)
-)
+    x1 = state["x1"]
+    y1 = state["y1"]
+
+    x2 = e.x
+    y2 = e.y
+
+    # clamp safety
+    x1, x2 = sorted([x1, x2])
+    y1, y2 = sorted([y1, y2])
+
+    bbox = (x1, y1, x2, y2)
+
+    status_label.config(text="ROI set (fixed)")
+    win.destroy()
