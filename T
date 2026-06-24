@@ -1,111 +1,23 @@
-def model_blind_scan():
-    global scan_count
+# ---------------- DRAW RESULT ----------------
+output = frame.copy()
 
-    # -------------------------
-    # GET FRAME (camera or oak safe)
-    # -------------------------
-    if use_oak:
-        frame = oak_queue.get().getCvFrame()
-    else:
-        if cap is None:
-            return
-        ret, frame = cap.read()
-        if not ret:
-            return
+# AI label
+cv2.putText(
+    output,
+    f"MODEL SCAN: {label} {confidence:.2f}",
+    (10, 35),
+    cv2.FONT_HERSHEY_SIMPLEX,
+    0.8,
+    color,
+    2
+)
 
-    frame = cv2.flip(frame, 1)
+# ---------------- HEATMAP ADD ----------------
+try:
+    patches = extract_features(frame)
+    heatmap = build_heatmap(frame, patches, anomaly_memory)
 
-    # -------------------------
-    # ROI HANDLING
-    # -------------------------
-    roi_frame = frame
-    x1 = y1 = 0
-
-    if bbox is not None:
-        x1, y1, x2, y2 = bbox
-        roi_frame = frame[y1:y2, x1:x2]
-
-        if roi_frame.size == 0:
-            return
-
-    # -------------------------
-    # BASE OUTPUT
-    # -------------------------
-    output = roi_frame.copy()
-
-    # -------------------------
-    # AI RESULT (SAFE)
-    # -------------------------
-    result = anomaly_predict(roi_frame)
-
-    if result:
-        label, color, confidence = result
-    else:
-        label, color, confidence = "UNKNOWN", (255, 255, 255), 0.0
-
-    # -------------------------
-    # HEATMAP (FIXED)
-    # -------------------------
-    try:
-        patches = extract_features(roi_frame)
-
-        heatmap = build_heatmap(
-            roi_frame,
-            patches,
-            anomaly_memory
-        )
-
-        if heatmap is not None:
-            output = cv2.addWeighted(
-                output,
-                0.65,
-                heatmap,
-                0.35,
-                0
-            )
-
-    except Exception as e:
-        print("Heatmap error:", e)
-
-    # -------------------------
-    # LABEL (ONLY ONE - NO SPAM BOXES)
-    # -------------------------
-    cv2.putText(
-        output,
-        f"{label} {confidence:.2f}",
-        (10, 30),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.8,
-        color,
-        2
-    )
-
-    # -------------------------
-    # SAVE SCAN
-    # -------------------------
-    filename = os.path.join(
-        SCAN_DIR,
-        f"scan_{scan_count}.jpg"
-    )
-
-    cv2.imwrite(filename, output)
-
-    scan_count += 1
-
-    # -------------------------
-    # AUTO OPEN (FIXED)
-    # -------------------------
-    if AUTO_OPEN_SCANS:
-        try:
-            import os
-            os.startfile(filename)
-        except Exception as e:
-            print("Auto open failed:", e)
-
-    # -------------------------
-    # STATUS UPDATE
-    # -------------------------
-    try:
-        status_label.config(text=f"Scan saved {scan_count}")
-    except:
-        pass
+    if heatmap is not None:
+        output = cv2.addWeighted(output, 0.65, heatmap, 0.35, 0)
+except:
+    pass
