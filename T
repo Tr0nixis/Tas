@@ -1,3 +1,1 @@
-preview_w, preview_h = 300, 300
-frame_small = cv2.resize(frame, (preview_w, preview_h))
-h, w = frame_small.shape[:2]
+rgb = cv2.cvtColor(frame_small, cv2.COLOR_BGR2RGB)
