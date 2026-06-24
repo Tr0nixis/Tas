@@ -1,12 +1,20 @@
-if AUTO_OPEN_SCAN:
+try:
 
-    try:
+    heatmap = build_heatmap(
+        frame,
+        patches,
+        temp_memory
+    )
 
-        if os.name == "nt":
-            os.startfile(filename)
+    if heatmap is not None:
 
-        else:
-            subprocess.Popen(["xdg-open", filename])
+        output = cv2.addWeighted(
+            output,
+            0.65,
+            heatmap,
+            0.35,
+            0
+        )
 
-    except:
-        pass
+except:
+    pass
