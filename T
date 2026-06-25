@@ -1,16 +1,22 @@
-result = anomaly_predict(frame)
+try:
 
-if result:
-    label, color, conf = result
+    patches = extract_features(frame)
 
-    if conf < 0.95:
-        heatmap = build_heatmap(frame, patches, anomaly_memory)
+    heatmap = build_heatmap(
+        frame,
+        patches,
+        anomaly_memory
+    )
 
-        if heatmap is not None:
-            display = cv2.addWeighted(
-                display,
-                0.65,
-                heatmap,
-                0.35,
-                0
-            )
+    if heatmap is not None:
+
+        output = cv2.addWeighted(
+            output,
+            0.65,
+            heatmap,
+            0.35,
+            0
+        )
+
+except Exception as e:
+    print("Heatmap error:", e)
