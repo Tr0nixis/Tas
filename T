@@ -1,1 +1,8 @@
-heat = np.clip(heat * 255, 0, 255).astype(np.uint8)
+max_val = heat.max()
+
+if max_val < 1e-6:
+    return None
+
+heat = (heat / max_val)
+heat = np.power(heat, 1.5)  # smooth suppression of noise
+heat = (heat * 255).astype(np.uint8)
