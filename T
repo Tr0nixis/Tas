@@ -1,8 +1,33 @@
-max_val = heat.max()
+def release(e):
+    global bbox
 
-if max_val < 1e-6:
-    return None
+    x1 = state["x1"]
+    y1 = state["y1"]
+    x2 = e.x
+    y2 = e.y
 
-heat = (heat / max_val)
-heat = np.power(heat, 1.5)  # smooth suppression of noise
-heat = (heat * 255).astype(np.uint8)
+    x1, x2 = sorted([x1, x2])
+    y1, y2 = sorted([y1, y2])
+
+    # actual camera resolution
+    cam_h, cam_w = frame.shape[:2]
+
+    # preview resolution
+    preview_w = 300
+    preview_h = 300
+
+    sx = cam_w / preview_w
+    sy = cam_h / preview_h
+
+    bbox = (
+        int(x1 * sx),
+        int(y1 * sy),
+        int(x2 * sx),
+        int(y2 * sy)
+    )
+
+    status_label.config(
+        text=f"ROI set ({cam_w}x{cam_h})"
+    )
+
+    win.destroy()
