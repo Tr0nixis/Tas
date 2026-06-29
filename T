@@ -1,107 +1,22 @@
-def open_roi_editor():
-    global bbox
+if bbox is not None:
 
-    if cap is None and not use_oak:
-        return
-
-    # ---------------- Capture frame ----------------
-    if use_oak:
-        frame = oak_queue.get().getCvFrame()
-    else:
-        ret, frame = cap.read()
-        if not ret:
-            return
-
-    frame = cv2.flip(frame, 1)
+    x1, y1, x2, y2 = bbox
 
     cam_h, cam_w = frame.shape[:2]
+    disp_h, disp_w = display.shape[:2]
 
-    # ---------------- Auto preview size ----------------
-    max_size = 700
+    sx = disp_w / cam_w
+    sy = disp_h / cam_h
 
-    scale = min(max_size / cam_w, max_size / cam_h)
+    dx1 = int(x1 * sx)
+    dy1 = int(y1 * sy)
+    dx2 = int(x2 * sx)
+    dy2 = int(y2 * sy)
 
-    preview_w = int(cam_w * scale)
-    preview_h = int(cam_h * scale)
-
-    frame_small = cv2.resize(frame, (preview_w, preview_h))
-
-    # ---------------- Window ----------------
-    win = tk.Toplevel(root)
-    win.title("ROI Editor")
-
-    canvas = tk.Canvas(
-        win,
-        width=preview_w,
-        height=preview_h
+    cv2.rectangle(
+        display,
+        (dx1, dy1),
+        (dx2, dy2),
+        (255,255,0),
+        2
     )
-    canvas.pack()
-
-    rgb = cv2.cvtColor(frame_small, cv2.COLOR_BGR2RGB)
-    img = Image.fromarray(rgb)
-    imgtk = ImageTk.PhotoImage(img)
-
-    canvas.imgtk = imgtk
-    canvas.create_image(
-        0,
-        0,
-        anchor="nw",
-        image=imgtk
-    )
-
-    state = {
-        "x1": 0,
-        "y1": 0,
-        "rect": None
-    }
-
-    # ---------------- Mouse ----------------
-
-    def press(e):
-        state["x1"] = e.x
-        state["y1"] = e.y
-
-    def drag(e):
-
-        if state["rect"] is not None:
-            canvas.delete(state["rect"])
-
-        state["rect"] = canvas.create_rectangle(
-            state["x1"],
-            state["y1"],
-            e.x,
-            e.y,
-            outline="yellow",
-            width=2
-        )
-
-    def release(e):
-        global bbox
-
-        x1 = state["x1"]
-        y1 = state["y1"]
-        x2 = e.x
-        y2 = e.y
-
-        x1, x2 = sorted([x1, x2])
-        y1, y2 = sorted([y1, y2])
-
-        sx = cam_w / preview_w
-        sy = cam_h / preview_h
-
-        bbox = (
-            int(x1 * sx),
-            int(y1 * sy),
-            int(x2 * sx),
-            int(y2 * sy)
-        )
-
-        status_label.config(
-            text=f"ROI set ({cam_w}x{cam_h})"
-        )
-
-        win.destroy()
-
-    canvas.bind("<ButtonPress-1>", press)
-    canvas.bind("<B1-Motion>", drag)
-    canvas.bind("<ButtonRelease-1>", release)
