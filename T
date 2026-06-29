@@ -1,22 +1,13 @@
+# ---------------- ROI ----------------
 if bbox is not None:
-
     x1, y1, x2, y2 = bbox
 
-    cam_h, cam_w = frame.shape[:2]
-    disp_h, disp_w = display.shape[:2]
+    x1 = max(0, x1)
+    y1 = max(0, y1)
+    x2 = min(frame.shape[1], x2)
+    y2 = min(frame.shape[0], y2)
 
-    sx = disp_w / cam_w
-    sy = disp_h / cam_h
+    roi = frame[y1:y2, x1:x2]
 
-    dx1 = int(x1 * sx)
-    dy1 = int(y1 * sy)
-    dx2 = int(x2 * sx)
-    dy2 = int(y2 * sy)
-
-    cv2.rectangle(
-        display,
-        (dx1, dy1),
-        (dx2, dy2),
-        (255,255,0),
-        2
-    )
+    if roi.size > 0:
+        frame = roi
