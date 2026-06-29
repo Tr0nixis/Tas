@@ -1,10 +1,3 @@
-cam_h, cam_w = frame.shape[:2]
-
-max_preview = 700
-
-scale = min(max_preview / cam_w, max_preview / cam_h)
-
-preview_w = int(cam_w * scale)
-preview_h = int(cam_h * scale)
-
-frame_small = cv2.resize(frame, (preview_w, preview_h))
+canvas.bind("<ButtonPress-1>", press)
+canvas.bind("<B1-Motion>", drag)
+canvas.bind("<ButtonRelease-1>", release)
