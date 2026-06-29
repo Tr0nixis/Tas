@@ -1,14 +1,286 @@
-disp_h, disp_w = display.shape[:2]
+Bilaga X – Utvecklardokumentation
 
-font_scale = max(0.6, disp_w / 600)
-thickness = max(2, int(font_scale * 2))
+1. Projektöversikt
 
-cv2.putText(
-    display,
-    f"{label} {conf:.2f}",
-    (10, int(40 * font_scale)),
-    cv2.FONT_HERSHEY_SIMPLEX,
-    font_scale,
-    color,
-    thickness
-)
+1.1 Vad har utvecklats
+
+Ett AI-baserat visuellt inspektionssystem har utvecklats för att analysera objekt med hjälp av en kamera. Systemet använder en referensmodell som tränas på godkända objekt och kan därefter avgöra om ett nytt objekt verkar vara godkänt eller avvikande. Programmet innehåller även funktioner för ROI (Region of Interest), databashantering, värmekarta (heatmap) och lagring av resultat.
+
+1.2 Vilket problem löses
+
+Systemet är utvecklat för att automatisera den visuella kvalitetskontrollen. Istället för att en operatör manuellt granskar varje objekt kan AI:n identifiera avvikelser och markera misstänkta områden. Målet är att minska risken för felaktiga produkter och samtidigt effektivisera kontrollprocessen.
+
+1.3 Vilken nivå är vi på
+
+☒ Pilot
+
+Systemet fungerar i praktiken och kan användas för tester och demonstrationer men behöver fortsatt utveckling och validering innan det kan användas i produktion.
+
+⸻
+
+2. Utveckling fram till idag
+
+2.1 Utvecklingssteg
+
+* Skapat grafiskt gränssnitt i Tkinter.
+* Implementerat kamerastöd för USB-kamera och OAK-1.
+* Implementerat AI-baserad anomalidetektion.
+* Skapat träningsfunktion för referensmodeller.
+* Implementerat ROI-funktion.
+* Skapat databassystem för flera modeller.
+* Implementerat blind scan.
+* Implementerat heatmap för visualisering.
+* Implementerat sparning av skannade bilder.
+
+2.2 Viktiga funktioner som finns idag
+
+* Kameraval
+* Livekamera
+* ROI (Region of Interest)
+* AI-inspektion
+* Heatmap
+* Blind Scan
+* Träning av referensmodell
+* Databashantering
+* Offline bildanalys
+* Sparning av resultatbilder
+
+2.3 Viktiga tekniska val
+
+Python valdes eftersom det erbjuder bra stöd för AI, bildbehandling och GUI-utveckling. EfficientNet används som feature extractor eftersom modellen ger hög noggrannhet med relativt låg beräkningskostnad. OpenCV används för kamerahantering och bildbehandling.
+
+⸻
+
+3. Start av system
+
+3.1 Startsteg
+
+1. Installera Python 3.
+2. Installera alla Python-bibliotek.
+3. Kontrollera att EfficientNet-vikterna finns i mappen “weights”.
+4. Starta kameran.
+5. Kör huvudprogrammet.
+
+3.2 Startkommando
+
+python System732.py
+
+3.3 Förutsättningar
+
+* Windows
+* Python 3.x
+* Installerade Python-paket
+* Kamera ansluten
+* Modellvikter installerade
+
+3.4 Verifiering
+
+Programmet startar, GUI visas och livekameran fungerar när kameran aktiveras.
+
+⸻
+
+4. Användning (drift)
+
+4.1 Operatörsflöde
+
+1. Starta programmet.
+2. Välj kamera.
+3. Starta kameran.
+4. Ladda en tränad modell.
+5. Placera objektet framför kameran.
+6. Utför Blind Scan eller live-inspektion.
+7. Kontrollera resultatet.
+
+4.2 OK/NOK
+
+OK = Objektet liknar träningsmaterialet.
+
+NOK = Objektet innehåller avvikelser eller misstänkta defekter.
+
+4.3 Åtgärd vid NOK
+
+Operatören kontrollerar objektet manuellt innan beslut om kassation eller vidare analys.
+
+⸻
+
+5. Träning av modell
+
+5.1 Träningssteg
+
+1. Starta kameran.
+2. Placera ett godkänt objekt framför kameran.
+3. Spara minst 10 godkända bilder.
+4. Klicka på “Train Memory”.
+5. Ange modellnamn.
+
+5.2 Träningsmetod
+
+Programmet extraherar AI-features från alla godkända bilder och sparar dem som en referensmodell (.npy).
+
+5.3 Dataplats
+
+anomaly_memories/
+
+5.4 Datamängd
+
+Minst 10 godkända bilder rekommenderas.
+
+⸻
+
+6. Uppdatering av modell
+
+6.1 Hur ny modell läggs in
+
+Skapa en ny träningsmodell eller kopiera en ny .npy-fil till mappen:
+
+anomaly_memories/
+
+Koppling till Product/Profile
+
+Varje modell representerar en produkt eller profil.
+
+Krävs omstart?
+
+☒ Nej
+
+Listan kan uppdateras direkt i programmet.
+
+⸻
+
+7. Kod- och mappstruktur
+
+7.1 Översikt
+
+Programmet är uppdelat i funktioner för kamera, AI, GUI, databaser och träning.
+
+7.2 Viktiga mappar/filer
+
+System732.py
+weights/
+saved_scans/
+anomaly_memories/
+anomaly_databases/
+anomaly_dataset/
+
+⸻
+
+8. GUI/HMI
+
+8.1 Beskrivning
+
+GUI:t innehåller livekamera, statusfält, knappar och listor över modeller och databaser.
+
+8.2 Knappar
+
+* Select Camera
+* Start
+* Stop
+* Save Good
+* Train Memory
+* Load Memory
+* Create Database
+* Load Database
+* ROI Editor
+* Model Blind Scan
+* Scan Image
+* Open Scan Folder
+* Clear Training
+* Toggle Auto Image Loader
+
+8.3 Resultatvisning
+
+Resultatet visas med:
+
+* Heatmap
+* Status (OK/NOK)
+* Konfidensvärde
+* Sparad resultatbild
+
+8.4 Felvisning
+
+Fel visas via dialogrutor och statusfält.
+
+⸻
+
+9. Vad fungerar bra
+
+* Livekameran fungerar stabilt.
+* AI:n kan skilja mellan godkända och avvikande objekt.
+* ROI fungerar.
+* Databashantering fungerar.
+* Blind Scan fungerar.
+* Heatmap fungerar för visualisering.
+
+⸻
+
+10. Vad fungerar inte / begränsningar
+
+* Heatmap kan ge vissa falska positiva markeringar.
+* Ljusförhållanden påverkar resultatet.
+* Kräver tillräckligt många träningsbilder.
+* OAK-1 används endast som kamera och inte för AI-beräkningar.
+
+⸻
+
+11. Kända risker
+
+* Dålig belysning försämrar resultatet.
+* Felaktiga träningsbilder påverkar AI-modellen.
+* För få träningsbilder kan ge låg precision.
+
+⸻
+
+12. Tekniska beroenden
+
+Hårdvara
+
+* USB-kamera eller Luxonis OAK-1
+* Windows-PC
+
+Mjukvara
+
+* Python 3
+* OpenCV
+* PyTorch
+* Torchvision
+* NumPy
+* Pillow
+* Scikit-learn
+* Tkinter
+
+⸻
+
+13. Nästa steg
+
+* Förbättra heatmap.
+* Minska falska positiva resultat.
+* Förbättra belysningshantering.
+* Optimera prestanda.
+* Färdigställa produktionsversion.
+
+⸻
+
+14. Lärdomar
+
+14.1 Fungerade bra
+
+* AI med EfficientNet.
+* ROI.
+* Databassystem.
+* GUI med Tkinter.
+
+14.2 Var svårt
+
+* Heatmap-optimering.
+* Hantering av olika kameraupplösningar.
+* Kalibrering av AI-tröskelvärden.
+
+14.3 Hade gjort annorlunda
+
+Strukturerat projektet i flera Python-filer från början istället för att samla allt i en stor fil.
+
+⸻
+
+15. Övrigt
+
+Projektet är utvecklat för att kunna byggas vidare med fler AI-modeller, förbättrad användarupplevelse och ytterligare funktioner för industriell kvalitetskontroll.
