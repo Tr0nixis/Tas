@@ -1,38 +1,9 @@
-def augment_image(img):
-    imgs = [img]
+for f in files:
 
-    h, w = img.shape[:2]
+    img = cv2.imread(os.path.join(VALID_DIR, f))
 
-    # Brightness
-    imgs.append(cv2.convertScaleAbs(img, alpha=1.0, beta=20))
-    imgs.append(cv2.convertScaleAbs(img, alpha=1.0, beta=-20))
+    if img is None:
+        continue
 
-    # Contrast
-    imgs.append(cv2.convertScaleAbs(img, alpha=1.1, beta=0))
-    imgs.append(cv2.convertScaleAbs(img, alpha=0.9, beta=0))
-
-    # Rotate ±5°
-    for angle in (-5, 5):
-        M = cv2.getRotationMatrix2D((w//2, h//2), angle, 1.0)
-        imgs.append(cv2.warpAffine(
-            img,
-            M,
-            (w, h),
-            borderMode=cv2.BORDER_REFLECT
-        ))
-
-    # Shift
-    M = np.float32([[1, 0, 5], [0, 1, 5]])
-    imgs.append(cv2.warpAffine(
-        img,
-        M,
-        (w, h),
-        borderMode=cv2.BORDER_REFLECT
-    ))
-
-    # Slight zoom
-    crop = img[10:h-10, 10:w-10]
-    crop = cv2.resize(crop, (w, h))
-    imgs.append(crop)
-
-    return imgs
+    for aug in augment_image(img):
+        anomaly_memory.extend(extract_features(aug))
