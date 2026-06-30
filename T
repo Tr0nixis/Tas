@@ -1,18 +1,38 @@
-np.save(os.path.join(MEMORY_DIR, f"{name}.npy"), np.array(anomaly_memory))
+def augment_image(img):
+    imgs = [img]
 
-refresh_memory_list()
+    h, w = img.shape[:2]
 
-# Auto-select the newly trained model
-memory_list.selection_clear(0, tk.END)
+    # Brightness
+    imgs.append(cv2.convertScaleAbs(img, alpha=1.0, beta=20))
+    imgs.append(cv2.convertScaleAbs(img, alpha=1.0, beta=-20))
 
-for i in range(memory_list.size()):
-    if memory_list.get(i) == f"{name}.npy":
-        memory_list.selection_set(i)
-        memory_list.activate(i)
-        memory_list.see(i)
-        break
+    # Contrast
+    imgs.append(cv2.convertScaleAbs(img, alpha=1.1, beta=0))
+    imgs.append(cv2.convertScaleAbs(img, alpha=0.9, beta=0))
 
-# Auto-load it
-load_selected_memory()
+    # Rotate ±5°
+    for angle in (-5, 5):
+        M = cv2.getRotationMatrix2D((w//2, h//2), angle, 1.0)
+        imgs.append(cv2.warpAffine(
+            img,
+            M,
+            (w, h),
+            borderMode=cv2.BORDER_REFLECT
+        ))
 
-status_label.config(text=f"Memory '{name}' trained and loaded")
+    # Shift
+    M = np.float32([[1, 0, 5], [0, 1, 5]])
+    imgs.append(cv2.warpAffine(
+        img,
+        M,
+        (w, h),
+        borderMode=cv2.BORDER_REFLECT
+    ))
+
+    # Slight zoom
+    crop = img[10:h-10, 10:w-10]
+    crop = cv2.resize(crop, (w, h))
+    imgs.append(crop)
+
+    return imgs
