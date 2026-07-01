@@ -1,9 +1,23 @@
-for f in files:
+Lokala AI-modeller för Note AB
+Syfte
+Ersätta Copilot Basic/Enterprise med lokala modeller via Ollama utan internet för känsliga dokument.
 
-    img = cv2.imread(os.path.join(VALID_DIR, f))
+Rekommenderade modeller
+- Llama 3.3 70B: högsta kvalitet, bäst för komplex analys.
+- Qwen 3 32B: stark för kod och dokument.
+- Mistral Small 3 (~24B): snabb och effektiv för vardag.
 
-    if img is None:
-        continue
+7B vs 70B
+7B är snabbare och kräver mindre minne men ger sämre resonemang. 70B ger betydligt bättre precision och passar företagsbruk.
 
-    for aug in augment_image(img):
-        anomaly_memory.extend(extract_features(aug))
+MacBook Pro 64 GB
+Kan köra 70B i kvantiserad form (Q4), 32B mycket bekvämt och Mistral Small mycket snabbt.
+
+Fördelar med Ollama
+Lokal körning, ingen data lämnar datorn, enkel API-integration, stöd för flera modeller.
+
+Rekommenderad arkitektur
+Ollama + RAG + lokal vektordatabas + dokumentindexering + behörighetskontroll + ingen internetåtkomst.
+
+Begränsningar
+Lokala modeller kräver uppdateringar, kan hallucinera och bör kompletteras med dokumentbaserad sökning.
