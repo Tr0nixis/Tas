@@ -1,17 +1,126 @@
-Modell: Mistral Small (~24B)
-Prestanda: 9.8/10
-Hastighet: 10/10
-Kvalitet: 8.8/10
-Rekommendation: Daglig användning, chatt, e-post och sammanfattningar
+Prestandajämförelse för lokala AI-modeller (7B–70B+) på NVIDIA DGX Spark (128 GB)
 
-Modell: Qwen 3 32B
-Prestanda: 10/10
-Hastighet: 9.2/10
-Kvalitet: 9.7/10
-Rekommendation: Kod, teknisk dokumentation och avancerad analys
+7B-modeller
 
-Modell: Llama 3.3 70B
-Prestanda: 9.4/10
-Hastighet: 7.5/10
-Kvalitet: 10/10
-Rekommendation: Komplex analys, juridiska dokument och företagskunskap
+Exempel
+
+* Llama 3.1 8B
+* Mistral 7B
+
+Prestanda
+
+* Mycket hög hastighet
+* Cirka 60–100 samtidiga användare vid normal användning
+* Låg minnesförbrukning
+
+Passar för
+
+* Chatt
+* E-post
+* Sammanfattningar
+* Enkla dokument
+* Grundläggande programmering
+
+⸻
+
+13B–14B-modeller
+
+Exempel
+
+* Qwen 2.5 14B
+* Phi-4
+
+Prestanda
+
+* Mycket hög hastighet
+* Cirka 50–80 samtidiga användare
+* Bättre resonemang än 7B
+
+Passar för
+
+* Företagsassistenter
+* Intern kunskapsbas
+* Teknisk dokumentation
+* Programmering
+
+⸻
+
+24B-modeller
+
+Exempel
+
+* Mistral Small (~24B)
+
+Prestanda
+
+* Hög hastighet
+* Cirka 30–60 samtidiga användare
+* Mycket bra balans mellan hastighet och kvalitet
+
+Passar för
+
+* Daglig användning i företag
+* Långa dokument
+* Sammanfattningar
+* Intern AI-assistent
+
+⸻
+
+32B-modeller
+
+Exempel
+
+* Qwen 3 32B
+
+Prestanda
+
+* Hög kvalitet
+* Cirka 20–40 samtidiga användare
+* Stark inom programmering och dokumentanalys
+
+Passar för
+
+* Programmering
+* Teknisk dokumentation
+* Avancerad dokumentanalys
+* Företagets interna kunskap
+
+⸻
+
+70B-modeller
+
+Exempel
+
+* Llama 3.3 70B
+
+Prestanda
+
+* Högsta AI-kvalitet
+* Cirka 8–15 samtidiga användare vid tung belastning
+* Upp till cirka 20–25 användare vid lättare användning
+* Hög minnesförbrukning
+
+Passar för
+
+* Juridiska dokument
+* Ekonomiska analyser
+* Forskning
+* Komplex problemlösning
+* Beslutsstöd
+
+⸻
+
+Sammanfattning
+
+Modellstorlek	Hastighet	AI-kvalitet	Samtidiga användare	Rekommenderad användning
+7B	10/10	7,5/10	60–100+	Enkel AI-assistent
+14B	9,7/10	8,5/10	50–80	Företagsassistent
+24B	9,5/10	9,2/10	30–60	Dagligt arbete
+32B	9,2/10	9,7/10	20–40	Programmering och dokumentanalys
+70B	7,5/10	10/10	8–15 (20–25 vid lätt belastning)	Avancerad analys och beslutsstöd
+
+Rekommendation
+
+För de flesta företag är en modell på 24B eller 32B det bästa valet eftersom den ger en mycket bra balans mellan hastighet, kvalitet och antal samtidiga användare.
+
+En 70B-modell bör användas när högsta möjliga kvalitet och avancerat resonemang är viktigare än svarshastighet, exempelvis för juridik, ekonomi, forskning eller komplex teknisk analys.
