@@ -1,39 +1,17 @@
-Modell
+Modell: Mistral Small (~24B)
+Prestanda: 9.8/10
+Hastighet: 10/10
+Kvalitet: 8.8/10
+Rekommendation: Daglig användning, chatt, e-post och sammanfattningar
 
-Prestanda
+Modell: Qwen 3 32B
+Prestanda: 10/10
+Hastighet: 9.2/10
+Kvalitet: 9.7/10
+Rekommendation: Kod, teknisk dokumentation och avancerad analys
 
-Hastighet
-
-Kvalitet
-
-Rekommendation
-
-Mistral Small (~24B)
-
-10/10
-
-10/10
-
-8.8/10
-
-Daglig användning
-
-Qwen 3 32B
-
-9.7/10
-
-9.2/10
-
-9.7/10
-
-Kod, dokument och analys
-
-Llama 3.3 70B
-
-8.8/10
-
-7.5/10
-
-10/10
-
-Komplex analys och företagsdokument
+Modell: Llama 3.3 70B
+Prestanda: 9.4/10
+Hastighet: 7.5/10
+Kvalitet: 10/10
+Rekommendation: Komplex analys, juridiska dokument och företagskunskap
