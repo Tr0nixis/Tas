@@ -1,23 +1,44 @@
-Lokala AI-modeller för Note AB
-Syfte
-Ersätta Copilot Basic/Enterprise med lokala modeller via Ollama utan internet för känsliga dokument.
+Sammanfattning av prestanda – MacBook Pro 64 GB (Ollama)
 
-Rekommenderade modeller
-- Llama 3.3 70B: högsta kvalitet, bäst för komplex analys.
-- Qwen 3 32B: stark för kod och dokument.
-- Mistral Small 3 (~24B): snabb och effektiv för vardag.
+Översikt
 
-7B vs 70B
-7B är snabbare och kräver mindre minne men ger sämre resonemang. 70B ger betydligt bättre precision och passar företagsbruk.
+En MacBook Pro med 64 GB Unified Memory är en mycket kapabel dator för att köra moderna AI-modeller lokalt. Den kan hantera modeller upp till cirka 70 miljarder parametrar (70B) i kvantiserad form utan att använda molntjänster.
 
-MacBook Pro 64 GB
-Kan köra 70B i kvantiserad form (Q4), 32B mycket bekvämt och Mistral Small mycket snabbt.
+Mistral Small (~24B)
 
-Fördelar med Ollama
-Lokal körning, ingen data lämnar datorn, enkel API-integration, stöd för flera modeller.
+* Prestanda: Mycket hög
+* Svarstid: Mycket snabb
+* Minnesanvändning: Låg till medel
+* Lämplig för: Chatt, e-post, sammanfattningar, dokument och allmän produktivitet.
+* Bedömning: Ett utmärkt val när snabbhet är viktigast.
 
-Rekommenderad arkitektur
-Ollama + RAG + lokal vektordatabas + dokumentindexering + behörighetskontroll + ingen internetåtkomst.
+Qwen 3 32B
 
-Begränsningar
-Lokala modeller kräver uppdateringar, kan hallucinera och bör kompletteras med dokumentbaserad sökning.
+* Prestanda: Hög
+* Svarstid: Snabb
+* Minnesanvändning: Medel
+* Lämplig för: Programmering, teknisk dokumentation, avancerade frågor och flerspråkigt arbete.
+* Bedömning: Ger en mycket bra balans mellan kvalitet och hastighet.
+
+Llama 3.3 70B
+
+* Prestanda: Mycket hög kvalitet
+* Svarstid: Märkbart långsammare än 24B- och 32B-modeller
+* Minnesanvändning: Hög
+* Lämplig för: Avancerad analys, juridiska dokument, långa rapporter och komplex problemlösning.
+* Bedömning: Den bästa modellen när kvalitet prioriteras framför svarstid.
+
+Jämförelse
+
+Modell	Hastighet	Kvalitet	Rekommenderad användning
+Mistral Small (~24B)	⭐⭐⭐⭐⭐	⭐⭐⭐⭐☆	Dagligt arbete
+Qwen 3 32B	⭐⭐⭐⭐☆	⭐⭐⭐⭐⭐	Dokument, kod och analys
+Llama 3.3 70B	⭐⭐⭐☆☆	⭐⭐⭐⭐⭐	Komplexa företagsuppgifter
+
+Rekommendation för Note AB
+
+* Använd Mistral Small som standardmodell för de flesta användare.
+* Använd Qwen 3 32B för utvecklare och tekniska team.
+* Använd Llama 3.3 70B när högsta möjliga kvalitet krävs för analyser eller känsliga dokument.
+
+Denna kombination ger snabbhet i vardagen och hög kvalitet för mer avancerade arbetsuppgifter, samtidigt som all data kan hållas lokalt inom företagets miljö.
