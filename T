@@ -1,44 +1,39 @@
-Sammanfattning av prestanda – MacBook Pro 64 GB (Ollama)
+Modell
 
-Översikt
+Prestanda
 
-En MacBook Pro med 64 GB Unified Memory är en mycket kapabel dator för att köra moderna AI-modeller lokalt. Den kan hantera modeller upp till cirka 70 miljarder parametrar (70B) i kvantiserad form utan att använda molntjänster.
+Hastighet
+
+Kvalitet
+
+Rekommendation
 
 Mistral Small (~24B)
 
-* Prestanda: Mycket hög
-* Svarstid: Mycket snabb
-* Minnesanvändning: Låg till medel
-* Lämplig för: Chatt, e-post, sammanfattningar, dokument och allmän produktivitet.
-* Bedömning: Ett utmärkt val när snabbhet är viktigast.
+10/10
+
+10/10
+
+8.8/10
+
+Daglig användning
 
 Qwen 3 32B
 
-* Prestanda: Hög
-* Svarstid: Snabb
-* Minnesanvändning: Medel
-* Lämplig för: Programmering, teknisk dokumentation, avancerade frågor och flerspråkigt arbete.
-* Bedömning: Ger en mycket bra balans mellan kvalitet och hastighet.
+9.7/10
+
+9.2/10
+
+9.7/10
+
+Kod, dokument och analys
 
 Llama 3.3 70B
 
-* Prestanda: Mycket hög kvalitet
-* Svarstid: Märkbart långsammare än 24B- och 32B-modeller
-* Minnesanvändning: Hög
-* Lämplig för: Avancerad analys, juridiska dokument, långa rapporter och komplex problemlösning.
-* Bedömning: Den bästa modellen när kvalitet prioriteras framför svarstid.
+8.8/10
 
-Jämförelse
+7.5/10
 
-Modell	Hastighet	Kvalitet	Rekommenderad användning
-Mistral Small (~24B)	⭐⭐⭐⭐⭐	⭐⭐⭐⭐☆	Dagligt arbete
-Qwen 3 32B	⭐⭐⭐⭐☆	⭐⭐⭐⭐⭐	Dokument, kod och analys
-Llama 3.3 70B	⭐⭐⭐☆☆	⭐⭐⭐⭐⭐	Komplexa företagsuppgifter
+10/10
 
-Rekommendation för Note AB
-
-* Använd Mistral Small som standardmodell för de flesta användare.
-* Använd Qwen 3 32B för utvecklare och tekniska team.
-* Använd Llama 3.3 70B när högsta möjliga kvalitet krävs för analyser eller känsliga dokument.
-
-Denna kombination ger snabbhet i vardagen och hög kvalitet för mer avancerade arbetsuppgifter, samtidigt som all data kan hållas lokalt inom företagets miljö.
+Komplex analys och företagsdokument
